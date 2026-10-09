@@ -27,9 +27,36 @@ public class BulletCommentsInfoItem extends InfoItem implements Comparable<Bulle
     private Duration duration;
     private int lastingTime;
     private boolean isLive;
+    private String authorName;
+    private String authorAvatarUrl;
+    private boolean moderator;
 
     public BulletCommentsInfoItem(final int serviceId, final String url, final String name) {
         super(InfoType.COMMENT, serviceId, url, name);
+    }
+
+    public String getAuthorName() {
+        return authorName;
+    }
+
+    public void setAuthorName(final String authorName) {
+        this.authorName = authorName;
+    }
+
+    public String getAuthorAvatarUrl() {
+        return authorAvatarUrl;
+    }
+
+    public void setAuthorAvatarUrl(final String authorAvatarUrl) {
+        this.authorAvatarUrl = authorAvatarUrl;
+    }
+
+    public boolean isModerator() {
+        return moderator;
+    }
+
+    public void setModerator(final boolean moderator) {
+        this.moderator = moderator;
     }
 
     public String getCommentText() {

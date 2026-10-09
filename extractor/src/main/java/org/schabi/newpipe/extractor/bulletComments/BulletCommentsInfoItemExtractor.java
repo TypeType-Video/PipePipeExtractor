@@ -26,6 +26,18 @@ public interface BulletCommentsInfoItemExtractor extends InfoItemExtractor {
         return Utils.EMPTY_STRING;
     }
 
+    default String getAuthorName() throws ParsingException {
+        return null;
+    }
+
+    default String getAuthorAvatarUrl() throws ParsingException {
+        return null;
+    }
+
+    default boolean isModerator() throws ParsingException {
+        return false;
+    }
+
     /**
      * Returns ARGB32 int. White: 0xFFFFFFFF.
      * @return ARGB32 int. White: 0xFFFFFFFF.

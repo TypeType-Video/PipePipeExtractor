@@ -17,6 +17,21 @@ public class BulletCommentsInfoItemsCollector
 
         // optional information
         try {
+            resultItem.setAuthorName(extractor.getAuthorName());
+        } catch (final Exception e) {
+            addError(e);
+        }
+        try {
+            resultItem.setAuthorAvatarUrl(extractor.getAuthorAvatarUrl());
+        } catch (final Exception e) {
+            addError(e);
+        }
+        try {
+            resultItem.setModerator(extractor.isModerator());
+        } catch (final Exception e) {
+            addError(e);
+        }
+        try {
             resultItem.setCommentText(extractor.getCommentText());
         } catch (final Exception e) {
             addError(e);

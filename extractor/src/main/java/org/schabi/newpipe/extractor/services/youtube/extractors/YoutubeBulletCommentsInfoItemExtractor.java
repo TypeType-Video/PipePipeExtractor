@@ -6,6 +6,7 @@ import com.grack.nanojson.JsonObject;
 import org.schabi.newpipe.extractor.bulletComments.BulletCommentsInfoItem;
 import org.schabi.newpipe.extractor.bulletComments.BulletCommentsInfoItemExtractor;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
+import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
 
 import java.time.Duration;
 
@@ -29,6 +30,34 @@ public class YoutubeBulletCommentsInfoItemExtractor implements BulletCommentsInf
             }
         }
         return result.toString().replaceAll("□", "");
+    }
+
+    @Override
+    public String getAuthorName() throws ParsingException {
+        if (!data.has("authorName")) {
+            return null;
+        }
+        return YoutubeParsingHelper.getTextFromObject(data.getObject("authorName"));
+    }
+
+    @Override
+    public String getAuthorAvatarUrl() {
+        final JsonArray thumbnails = data.getObject("authorPhoto").getArray("thumbnails");
+        return thumbnails.isEmpty() ? null : thumbnails.getObject(thumbnails.size() - 1)
+                .getString("url");
+    }
+
+    @Override
+    public boolean isModerator() {
+        final JsonArray badges = data.getArray("authorBadges");
+        for (int i = 0; i < badges.size(); i++) {
+            final String iconType = badges.getObject(i).getObject("liveChatAuthorBadgeRenderer")
+                    .getObject("icon").getString("iconType");
+            if ("MODERATOR".equals(iconType)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
