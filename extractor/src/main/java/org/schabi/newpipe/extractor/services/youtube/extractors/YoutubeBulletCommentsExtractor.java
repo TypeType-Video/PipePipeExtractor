@@ -37,11 +37,10 @@ public class YoutubeBulletCommentsExtractor extends BulletCommentsExtractor {
     private JsonObject data;
     private String key;
     private StreamType streamType;
-    private ScheduledExecutorService executor;
+    private final YoutubeLiveChatPollingTask pollingTask = new YoutubeLiveChatPollingTask(this::fetchMessage);
     private final CopyOnWriteArrayList<YoutubeBulletCommentPair> messages = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<YoutubeBulletCommentPair> SuperChatMessages = new CopyOnWriteArrayList<>();
     private String lastContinuation;
-    private ScheduledFuture<?> future;
     private boolean disabled = false;
     private long currentPlayPosition = 0;
     private long lastPlayPosition = 0;
@@ -179,8 +178,7 @@ public class YoutubeBulletCommentsExtractor extends BulletCommentsExtractor {
         if(isDisabled()){
             return null;
         }
-        executor = Executors.newSingleThreadScheduledExecutor();
-        future = executor.scheduleAtFixedRate(this::fetchMessage, 1000, 1000, TimeUnit.MILLISECONDS);
+        pollingTask.start();
         return null;
     }
 
@@ -211,16 +209,19 @@ public class YoutubeBulletCommentsExtractor extends BulletCommentsExtractor {
 
     @Override
     public void disconnect() {
-        if(future != null && !future.isCancelled()){
-            future.cancel(true);
-        }
+        pollingTask.pause();
     }
 
     @Override
     public void reconnect() {
-        if(!isDisabled() && future != null && future.isCancelled()){
-            future = executor.scheduleAtFixedRate(this::fetchMessage, 1000, 1000, TimeUnit.MILLISECONDS);
+        if (!isDisabled()) {
+            pollingTask.resume();
         }
+    }
+
+    @Override
+    public void close() {
+        pollingTask.close();
     }
 
     @Override

@@ -56,6 +56,11 @@ public abstract class BulletCommentsExtractor extends ListExtractor<BulletCommen
     public void setCurrentPlayPosition(long currentPlayPosition) {
     }
 
+    /** Permanently release resources; unlike disconnect, this cannot be resumed. */
+    public void close() {
+        disconnect();
+    }
+
     public void clearMappingState() {
     }
 }
