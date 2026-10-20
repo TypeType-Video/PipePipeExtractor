@@ -827,8 +827,9 @@ public final class YoutubeSabrProbe {
         if (info.getProfile().getUserAgent() != null) {
             headers.put("User-Agent", Collections.singletonList(info.getProfile().getUserAgent()));
         }
-        if (!isWebSabrProfile(info.getProfile())
-                && info.getVisitorData() != null && !info.getVisitorData().isEmpty()) {
+        // The living-room (TV) profile carries a session-bound poToken, so the request must
+        // present the same visitor identity even though the profile is flagged as web-like.
+        if (info.getVisitorData() != null && !info.getVisitorData().isEmpty()) {
             headers.put("X-Goog-Visitor-Id", Collections.singletonList(info.getVisitorData()));
         }
         if (info.getAuthorizationHeader() != null && !info.getAuthorizationHeader().isEmpty()) {
