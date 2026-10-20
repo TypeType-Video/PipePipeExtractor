@@ -26,6 +26,8 @@ public final class YoutubeSabrInfo implements Serializable {
     private final boolean playerPoTokenAttached;
     @Nonnull
     private final List<YoutubeSabrFormat> formats;
+    @Nullable
+    private final String authorizationHeader;
 
     YoutubeSabrInfo(@Nonnull final YoutubeSabrClientProfile profile,
                     @Nonnull final String videoId,
@@ -48,6 +50,20 @@ public final class YoutubeSabrInfo implements Serializable {
                     @Nullable final String videoPlaybackUstreamerConfig,
                     @Nonnull final List<YoutubeSabrFormat> formats,
                     final boolean playerPoTokenAttached) {
+        this(profile, videoId, cpn, clientVersion, visitorData, serverAbrStreamingUrl,
+                videoPlaybackUstreamerConfig, formats, playerPoTokenAttached, null);
+    }
+
+    YoutubeSabrInfo(@Nonnull final YoutubeSabrClientProfile profile,
+                    @Nonnull final String videoId,
+                    @Nonnull final String cpn,
+                    @Nonnull final String clientVersion,
+                    @Nullable final String visitorData,
+                    @Nullable final String serverAbrStreamingUrl,
+                    @Nullable final String videoPlaybackUstreamerConfig,
+                    @Nonnull final List<YoutubeSabrFormat> formats,
+                    final boolean playerPoTokenAttached,
+                    @Nullable final String authorizationHeader) {
         this.profile = profile;
         this.videoId = videoId;
         this.cpn = cpn;
@@ -57,6 +73,12 @@ public final class YoutubeSabrInfo implements Serializable {
         this.videoPlaybackUstreamerConfig = videoPlaybackUstreamerConfig;
         this.formats = formats;
         this.playerPoTokenAttached = playerPoTokenAttached;
+        this.authorizationHeader = authorizationHeader;
+    }
+
+    @Nullable
+    public String getAuthorizationHeader() {
+        return authorizationHeader;
     }
 
     @Nonnull

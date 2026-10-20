@@ -831,7 +831,27 @@ public final class YoutubeSabrProbe {
                 && info.getVisitorData() != null && !info.getVisitorData().isEmpty()) {
             headers.put("X-Goog-Visitor-Id", Collections.singletonList(info.getVisitorData()));
         }
+        if (info.getAuthorizationHeader() != null && !info.getAuthorizationHeader().isEmpty()) {
+            headers.put("Authorization", Collections.singletonList(info.getAuthorizationHeader()));
+        }
         return headers;
+    }
+
+    @Nonnull
+    public static YoutubeSabrInfo withAuthorizationHeader(
+            @Nonnull final YoutubeSabrInfo info,
+            @Nullable final String authorizationHeader) {
+        return new YoutubeSabrInfo(
+                info.getProfile(),
+                info.getVideoId(),
+                info.getCpn(),
+                info.getClientVersion(),
+                info.getVisitorData(),
+                info.getServerAbrStreamingUrl(),
+                info.getVideoPlaybackUstreamerConfig(),
+                info.getFormats(),
+                info.isPlayerPoTokenAttached(),
+                authorizationHeader);
     }
 
     private static boolean isWebSabrProfile(@Nonnull final YoutubeSabrClientProfile profile) {
