@@ -835,6 +835,11 @@ public final class YoutubeSabrProbe {
         if (info.getAuthorizationHeader() != null && !info.getAuthorizationHeader().isEmpty()) {
             headers.put("Authorization", Collections.singletonList(info.getAuthorizationHeader()));
         }
+        if (info.getProfile() == YoutubeSabrClientProfile.TVHTML5
+                && info.getVisitorData() != null && !info.getVisitorData().isEmpty()) {
+            headers.put("Cookie", Collections.singletonList(
+                    "VISITOR_INFO1_LIVE=" + info.getVisitorData()));
+        }
         return headers;
     }
 
