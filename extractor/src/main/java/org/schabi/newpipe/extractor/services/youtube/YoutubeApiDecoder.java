@@ -184,10 +184,22 @@ public final class YoutubeApiDecoder {
                                          @Nullable final List<String> signatureParams,
                                          @Nullable final List<String> nParams)
             throws ParsingException {
+        return decodeBatch(playerId, null, signatureParams, nParams);
+    }
+
+    @Nonnull
+    static BatchDecodeResult decodeBatch(@Nonnull final String playerId,
+                                         @Nullable final String clientName,
+                                         @Nullable final List<String> signatureParams,
+                                         @Nullable final List<String> nParams)
+            throws ParsingException {
+        final String cachePrefix = clientName == null
+                ? playerId
+                : clientName + ":" + playerId;
         final YoutubeJavaScriptDecoder decoder = localDecoder;
         if (decoder != null) {
             try {
-                return decoder.decodeBatch(playerId, signatureParams, nParams);
+                return decoder.decodeBatch(playerId, clientName, signatureParams, nParams);
             } catch (final Exception localFailure) {
                 disableLocalDecoder(decoder);
             }
@@ -207,7 +219,7 @@ public final class YoutubeApiDecoder {
 
         if (hasSigs) {
             for (final String sig : signatureParams) {
-                final String cachedResult = DECODE_CACHE.get(playerId + ":sig:" + sig);
+                final String cachedResult = DECODE_CACHE.get(cachePrefix + ":sig:" + sig);
                 if (cachedResult != null) {
                     sigResults.put(sig, cachedResult);
                 } else {
@@ -218,7 +230,7 @@ public final class YoutubeApiDecoder {
 
         if (hasNs) {
             for (final String n : nParams) {
-                final String cachedResult = DECODE_CACHE.get(playerId + ":n:" + n);
+                final String cachedResult = DECODE_CACHE.get(cachePrefix + ":n:" + n);
                 if (cachedResult != null) {
                     nResults.put(n, cachedResult);
                 } else {
@@ -234,6 +246,10 @@ public final class YoutubeApiDecoder {
         try {
             final StringBuilder urlBuilder = new StringBuilder(API_BASE_URL);
             urlBuilder.append("?player=").append(playerId);
+            if (clientName != null && !clientName.isEmpty()) {
+                urlBuilder.append("&client=")
+                        .append(URLEncoder.encode(clientName, StandardCharsets.UTF_8.name()));
+            }
 
             if (!uncachedNs.isEmpty()) {
                 urlBuilder.append("&n=");
@@ -282,7 +298,7 @@ public final class YoutubeApiDecoder {
                         throw new ParsingException("API returned empty decoded value for n parameter: " + nParam);
                     }
                     nResults.put(nParam, decodedValue);
-                    DECODE_CACHE.put(playerId + ":n:" + nParam, decodedValue);
+                    DECODE_CACHE.put(cachePrefix + ":n:" + nParam, decodedValue);
                 }
             }
 
@@ -299,7 +315,7 @@ public final class YoutubeApiDecoder {
                         throw new ParsingException("API returned empty decoded value for signature: " + sig);
                     }
                     sigResults.put(sig, decodedValue);
-                    DECODE_CACHE.put(playerId + ":sig:" + sig, decodedValue);
+                    DECODE_CACHE.put(cachePrefix + ":sig:" + sig, decodedValue);
                 }
             }
 

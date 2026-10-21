@@ -8,6 +8,7 @@ import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.exceptions.ReCaptchaException;
 import org.schabi.newpipe.extractor.localization.Localization;
+import org.schabi.newpipe.extractor.services.youtube.sabr.YoutubeSabrClientProfile;
 import org.schabi.newpipe.extractor.utils.Parser;
 
 import javax.annotation.Nonnull;
@@ -46,6 +47,8 @@ public final class YoutubeJavaScriptPlayerManager {
 
     @Nullable
     private static PlayerMetadata playerMetadata;
+    @Nullable
+    private static PlayerMetadata tvPlayerMetadata;
 
     private YoutubeJavaScriptPlayerManager() {
     }
@@ -194,10 +197,20 @@ public final class YoutubeJavaScriptPlayerManager {
             @Nonnull final String videoId,
             @Nullable final List<String> signatures,
             @Nullable final List<String> throttlingParams) throws ParsingException {
-        final String playerId = getPlayerMetadata(videoId).playerId;
+        return deobfuscateBatch(videoId, null, signatures, throttlingParams);
+    }
+
+    @Nonnull
+    public static YoutubeApiDecoder.BatchDecodeResult deobfuscateBatch(
+            @Nonnull final String videoId,
+            @Nullable final YoutubeSabrClientProfile profile,
+            @Nullable final List<String> signatures,
+            @Nullable final List<String> throttlingParams) throws ParsingException {
+        final String clientName = profile == null ? null : profile.getClientName();
+        final String playerId = getPlayerMetadata(videoId, clientName).playerId;
         final long startedAtNanos = System.nanoTime();
         final YoutubeApiDecoder.BatchDecodeResult result = YoutubeApiDecoder.decodeBatch(
-                playerId, signatures, throttlingParams);
+                playerId, clientName, signatures, throttlingParams);
         logPerformanceIfSlow(videoId, "ejs.batch.decode", startedAtNanos);
         return result;
     }
@@ -211,7 +224,15 @@ public final class YoutubeJavaScriptPlayerManager {
     @Nonnull
     private static PlayerMetadata getPlayerMetadata(@Nonnull final String videoId)
             throws ParsingException {
-        final PlayerMetadata currentMetadata = playerMetadata;
+        return getPlayerMetadata(videoId, null);
+    }
+
+    @Nonnull
+    private static PlayerMetadata getPlayerMetadata(
+            @Nonnull final String videoId,
+            @Nullable final String clientName) throws ParsingException {
+        final boolean tvClient = "TVHTML5".equals(clientName);
+        final PlayerMetadata currentMetadata = tvClient ? tvPlayerMetadata : playerMetadata;
         if (currentMetadata != null && !currentMetadata.isExpired()) {
             return currentMetadata;
         }
@@ -219,11 +240,18 @@ public final class YoutubeJavaScriptPlayerManager {
         final long startedAtNanos = System.nanoTime();
         final YoutubeJavaScriptDecoder decoder = YoutubeApiDecoder.getLocalDecoder();
         if (decoder != null) {
-            final YoutubeJavaScriptDecoder.PlayerData data = decoder.getPlayerData(videoId);
-            playerMetadata = new PlayerMetadata(data.getPlayerId(), data.getSignatureTimestamp(),
+            final YoutubeJavaScriptDecoder.PlayerData data =
+                    decoder.getPlayerData(videoId, clientName);
+            final PlayerMetadata metadata =
+                    new PlayerMetadata(data.getPlayerId(), data.getSignatureTimestamp(),
                     System.currentTimeMillis() + PLAYER_METADATA_TTL_MILLIS);
+            if (tvClient) {
+                tvPlayerMetadata = metadata;
+            } else {
+                playerMetadata = metadata;
+            }
             logPerformance(videoId, "ejs.playerMetadata.local", startedAtNanos);
-            return playerMetadata;
+            return metadata;
         }
 
         playerMetadata = fetchLatestPlayerMetadata();

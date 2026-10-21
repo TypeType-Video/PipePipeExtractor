@@ -12,10 +12,26 @@ public interface YoutubeJavaScriptDecoder {
     PlayerData getPlayerData(@Nonnull String videoId) throws ParsingException;
 
     @Nonnull
+    default PlayerData getPlayerData(@Nonnull final String videoId,
+                                     @Nullable final String clientName)
+            throws ParsingException {
+        return getPlayerData(videoId);
+    }
+
+    @Nonnull
     YoutubeApiDecoder.BatchDecodeResult decodeBatch(
             @Nonnull String playerId,
             @Nullable List<String> signatures,
             @Nullable List<String> throttlingParameters) throws ParsingException;
+
+    @Nonnull
+    default YoutubeApiDecoder.BatchDecodeResult decodeBatch(
+            @Nonnull final String playerId,
+            @Nullable final String clientName,
+            @Nullable final List<String> signatures,
+            @Nullable final List<String> throttlingParameters) throws ParsingException {
+        return decodeBatch(playerId, signatures, throttlingParameters);
+    }
 
     final class PlayerData {
         @Nonnull

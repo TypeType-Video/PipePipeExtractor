@@ -248,7 +248,7 @@ public final class YoutubeSabrProbe {
         if (!signatures.isEmpty() || !nParameters.isEmpty()) {
             final YoutubeApiDecoder.BatchDecodeResult decoded =
                     YoutubeJavaScriptPlayerManager.deobfuscateBatch(videoId,
-                            new ArrayList<>(signatures), new ArrayList<>(nParameters));
+                            profile, new ArrayList<>(signatures), new ArrayList<>(nParameters));
             YoutubeSabrFormat.resolveInitializationUrls(formats, decoded);
             serverAbrStreamingUrl = YoutubeSabrFormat.resolveNParameter(
                     unresolvedServerAbrStreamingUrl, decoded);
@@ -858,6 +858,9 @@ public final class YoutubeSabrProbe {
         if (!isWebSabrProfile(info.getProfile())
                 && info.getVisitorData() != null && !info.getVisitorData().isEmpty()) {
             headers.put("X-Goog-Visitor-Id", Collections.singletonList(info.getVisitorData()));
+        }
+        if (info.getAuthorizationHeader() != null && !info.getAuthorizationHeader().isEmpty()) {
+            headers.put("Authorization", Collections.singletonList(info.getAuthorizationHeader()));
         }
         return headers;
     }
