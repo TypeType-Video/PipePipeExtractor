@@ -2,6 +2,7 @@ package org.schabi.newpipe.extractor.services.youtube.sabr;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 
@@ -50,36 +51,37 @@ final class YoutubeSabrRequestBuilder {
         final List<SabrBufferedRange> bufferedRanges = streamState == null
                 ? java.util.Collections.emptyList()
                 : streamState.getBufferedRanges();
+        final boolean initialProbe = streamState != null
+                && streamState.getRawPlaybackCookie() == null && playerTimeMs == 0;
+        final List<SabrBufferedRange> requestBufferedRanges =
+                initialProbe
+                        ? (streamState.getEnabledTrackTypesBitfield()
+                        == ENABLED_TRACK_TYPES_AUDIO_ONLY
+                        ? Arrays.asList(SabrBufferedRange.full(videoFormat))
+                        : Arrays.asList(SabrBufferedRange.full(audioFormat)))
+                        : bufferedRanges;
         final boolean forcedInitialPlaybackState = streamState != null
                 && streamState.shouldWriteFirstRequestPlaybackState();
-        final boolean includeInitialPlaybackState = forcedInitialPlaybackState
-                || playerTimeMs > 0 || !bufferedRanges.isEmpty();
+        final boolean includeInitialPlaybackState = streamState != null;
         final SabrProto.Writer request = new SabrProto.Writer();
         request.writeMessage(1, buildClientAbrState(audioFormat, videoFormat, playerTimeMs,
-                includeInitialPlaybackState && !forcedInitialPlaybackState,
+                false,
                 streamState == null
                         ? ENABLED_TRACK_TYPES_VIDEO_AND_AUDIO
                         : streamState.getEnabledTrackTypesBitfield(),
                 streamState));
         if (includeInitialPlaybackState) {
-            if (streamState.shouldSelectVideoFormatBeforeAudio()
-                    && streamState.shouldSelectVideoFormat()
-                    && streamState.isInitialized(videoFormat)) {
-                request.writeMessage(2, SabrProto.formatId(videoFormat));
+            if (initialProbe) {
+                request.writeMessage(2, SabrProto.formatId(
+                        streamState.getEnabledTrackTypesBitfield()
+                                == ENABLED_TRACK_TYPES_AUDIO_ONLY
+                                ? videoFormat : audioFormat));
             }
-            if (streamState.shouldSelectAudioFormat() && streamState.isInitialized(audioFormat)) {
-                request.writeMessage(2, SabrProto.formatId(audioFormat));
-            }
-            if (!streamState.shouldSelectVideoFormatBeforeAudio()
-                    && streamState.shouldSelectVideoFormat()
-                    && streamState.isInitialized(videoFormat)) {
-                request.writeMessage(2, SabrProto.formatId(videoFormat));
-            }
-            for (final SabrBufferedRange range : bufferedRanges) {
+            for (final SabrBufferedRange range : requestBufferedRanges) {
                 request.writeMessage(3, range.toProto(
                         streamState.shouldWriteBufferedRangeTimeRange()));
             }
-            if (streamState.shouldWriteTopLevelPlayerTimeMs()) {
+            if (playerTimeMs > 0 && streamState.shouldWriteTopLevelPlayerTimeMs()) {
                 request.writeUInt64(4, playerTimeMs);
             }
         }
@@ -178,11 +180,13 @@ final class YoutubeSabrRequestBuilder {
         final SabrProto.Writer state = new SabrProto.Writer();
         final boolean officialWebClientAbrFields = streamState != null
                 && streamState.shouldWriteOfficialWebClientAbrFields();
-        if ((includeFollowUpState || officialWebClientAbrFields) && streamState != null
+        final boolean firstRequest = streamState != null && playerTimeMs == 0;
+        if ((includeFollowUpState || officialWebClientAbrFields || firstRequest)
+                && streamState != null
                 && streamState.shouldWriteLastManualSelectedResolution()) {
             state.writeInt32(16, Math.max(videoFormat.getHeight(), 360));
         }
-        if (includeFollowUpState || officialWebClientAbrFields) {
+        if ((includeFollowUpState || officialWebClientAbrFields) && !firstRequest) {
             state.writeInt32(18, streamState != null && streamState.getClientViewportWidth() > 0
                     ? streamState.getClientViewportWidth()
                     : Math.max(videoFormat.getWidth(), 640));
@@ -193,13 +197,19 @@ final class YoutubeSabrRequestBuilder {
         final Integer stickyResolutionOverride = streamState == null
                 ? null
                 : streamState.getStickyResolutionOverride();
-        state.writeInt32(21, stickyResolutionOverride == null
-                ? Math.max(videoFormat.getHeight(), 360)
-                : stickyResolutionOverride);
-        if (includeFollowUpState || officialWebClientAbrFields) {
+        if (!firstRequest || enabledTrackTypesBitfield == ENABLED_TRACK_TYPES_VIDEO_ONLY) {
+            state.writeInt32(21, stickyResolutionOverride == null
+                    ? Math.max(videoFormat.getHeight(), 360)
+                    : stickyResolutionOverride);
+        }
+        if (includeFollowUpState || officialWebClientAbrFields || firstRequest) {
             final long bandwidthEstimate = streamState != null
                     && streamState.getBandwidthEstimate() > 0
                     ? streamState.getBandwidthEstimate()
+                    : enabledTrackTypesBitfield == ENABLED_TRACK_TYPES_AUDIO_ONLY
+                    ? audioFormat.getBitrate()
+                    : enabledTrackTypesBitfield == ENABLED_TRACK_TYPES_VIDEO_ONLY
+                    ? videoFormat.getBitrate()
                     : audioFormat.getBitrate() > 0 && videoFormat.getBitrate() > 0
                     ? (audioFormat.getBitrate() + videoFormat.getBitrate()) * 2L
                     : -1;
@@ -207,17 +217,21 @@ final class YoutubeSabrRequestBuilder {
                 state.writeUInt64(23, bandwidthEstimate);
             }
         }
-        final Integer visibility = streamState == null
-                ? Integer.valueOf(1)
-                : streamState.getClientAbrVisibility();
+        final Integer visibility = streamState == null ? Integer.valueOf(1) : null;
         if (visibility != null) {
             state.writeInt32(34, visibility);
+        }
+        if (firstRequest) {
+            state.writeBool(22, false);
         }
         state.writeFloat(35, streamState == null ? 1.0f : streamState.getPlaybackRate());
         if (enabledTrackTypesBitfield != ENABLED_TRACK_TYPES_VIDEO_AND_AUDIO) {
             state.writeInt32(40, enabledTrackTypesBitfield);
         }
-        if (audioFormat.isDrc()) {
+        if (firstRequest) {
+            state.writeBool(46, audioFormat.isDrc());
+            state.writeUInt64(68, 0);
+        } else if (audioFormat.isDrc()) {
             state.writeBool(46, true);
         }
         if (streamState != null
@@ -402,6 +416,8 @@ final class YoutubeSabrRequestBuilder {
         }
         if (playbackCookie != null && playbackCookie.length > 0) {
             context.writeBytes(3, playbackCookie);
+        } else if (streamState != null && streamState.getRequestPlayerTimeMs() == 0) {
+            context.writeBytes(3, new byte[0]);
         }
         if (streamState != null) {
             for (final SabrContextUpdate contextUpdate : streamState.getActiveSabrContexts()) {
@@ -432,10 +448,12 @@ final class YoutubeSabrRequestBuilder {
         }
         client.writeInt32(16, parseInt(info.getProfile().getClientId(), -1));
         client.writeStringIfNotEmpty(17, info.getClientVersion());
-        client.writeStringIfNotEmpty(18, info.getProfile().getOsName());
-        client.writeStringIfNotEmpty(19, info.getProfile().getOsVersion());
-        client.writeStringIfNotEmpty(21, "en-US");
-        client.writeStringIfNotEmpty(22, "US");
+        client.writeStringIfNotEmpty(18, "Macintosh");
+        client.writeStringIfNotEmpty(19, "10_15_7");
+        if (info.getProfile() != YoutubeSabrClientProfile.TVHTML5) {
+            client.writeStringIfNotEmpty(21, "en-US");
+            client.writeStringIfNotEmpty(22, "US");
+        }
         return client.toByteArray();
     }
 

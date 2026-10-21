@@ -250,8 +250,8 @@ public final class YoutubeSabrStreamState {
         bufferedRangesOverride = new ArrayList<>();
         enabledTrackTypesBitfield = format.isVideo()
                 ? TRACK_MODE_VIDEO_ONLY : TRACK_MODE_AUDIO_ONLY;
-        selectAudioFormat = false;
-        selectVideoFormat = false;
+        selectAudioFormat = true;
+        selectVideoFormat = true;
         preferAudioFormat = true;
         preferVideoFormat = true;
         playerTimeMsOverride = Math.max(0, playerTimeMs);

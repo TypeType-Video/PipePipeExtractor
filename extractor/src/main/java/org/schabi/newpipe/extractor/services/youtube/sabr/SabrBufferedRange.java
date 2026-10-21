@@ -41,6 +41,13 @@ public final class SabrBufferedRange {
     }
 
     @Nonnull
+    static SabrBufferedRange initial(@Nonnull final YoutubeSabrFormat format,
+                                     final long durationMs) {
+        return new SabrBufferedRange(format.getItag(), format.getLastModified(), format.getXtags(),
+                0, durationMs, -1, -1, 1000);
+    }
+
+    @Nonnull
     byte[] toProto() {
         return toProto(true);
     }
@@ -49,10 +56,16 @@ public final class SabrBufferedRange {
     byte[] toProto(final boolean includeTimeRange) {
         final SabrProto.Writer range = new SabrProto.Writer();
         range.writeMessage(1, formatIdProto());
-        range.writeUInt64(2, startTimeMs);
+        if (startTimeMs > 0) {
+            range.writeUInt64(2, startTimeMs);
+        }
         range.writeUInt64(3, durationMs);
-        range.writeInt32(4, startSegmentIndex);
-        range.writeInt32(5, endSegmentIndex);
+        if (startSegmentIndex >= 0) {
+            range.writeInt32(4, startSegmentIndex);
+        }
+        if (endSegmentIndex >= 0) {
+            range.writeInt32(5, endSegmentIndex);
+        }
         if (includeTimeRange) {
             range.writeMessage(6, timeRangeProto());
         }
