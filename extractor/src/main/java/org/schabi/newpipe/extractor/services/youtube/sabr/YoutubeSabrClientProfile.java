@@ -17,8 +17,8 @@ public enum YoutubeSabrClientProfile {
     IOS("IOS", "5", "19.45.4", "iOS", "18.1.0.22B83", false,
             "com.google.ios.youtube/19.45.4(iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X; US)"),
     TVHTML5("TVHTML5", "7", "7.20250923.13.00", null, null, true,
-            "Mozilla/5.0 (PlayStation; PlayStation 4/12.00) AppleWebKit/605.1.15 "
-                    + "(KHTML, like Gecko) Version/15.4 Safari/605.1.15");
+            "Mozilla/5.0 (SMART-TV; X11; Linux armv7l) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36");
 
     @Nonnull
     private final String clientName;
