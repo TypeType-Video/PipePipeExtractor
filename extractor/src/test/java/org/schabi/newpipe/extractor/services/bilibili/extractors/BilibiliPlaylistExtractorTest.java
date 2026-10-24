@@ -188,4 +188,71 @@ class BilibiliPlaylistExtractorTest {
         assertEquals("[Unknown]", extractor.getUploaderName());
         assertEquals("", extractor.getUploaderAvatarUrl());
     }
+    @Test
+    void getPageHandlesPaginationWithoutPriorOnFetchPage() throws Exception {
+        String page2Url = "https://api.bilibili.com/x/polymer/web-space/seasons_archives_list?mid=23630128&season_id=2045&sort_reverse=false&page_num=2&page_size=30";
+        BilibiliPlaylistLinkHandlerFactory factory = new BilibiliPlaylistLinkHandlerFactory();
+        ListLinkHandler handler = factory.fromUrl("https://www.bilibili.com/medialist/play/23630128?business=space_collection&business_id=2045");
+
+        Downloader mockDownloader = new Downloader() {
+            @Override
+            public Response execute(@Nonnull Request request) {
+                if (request.url().contains("finger/spi")) {
+                    return new Response(200, "OK",
+                            Collections.singletonMap("date", Collections.singletonList("Thu, 15 Oct 2026 12:00:00 GMT")),
+                            "{\"code\":0,\"data\":{\"b_3\":\"buvid3_test\",\"b_4\":\"buvid4_test\"}}",
+                            new byte[0], request.url());
+                }
+                if (request.url().contains("GenWebTicket")) {
+                    return new Response(200, "OK", Collections.emptyMap(),
+                            "{\"code\":0,\"data\":{\"ticket\":\"ticket_test\",\"created_at\":1700000000,\"ttl\":100000000}}",
+                            new byte[0], request.url());
+                }
+                if (request.url().contains("seasons_archives_list")) {
+                    return new Response(200, "OK", Collections.emptyMap(), """
+                            {
+                              "code": 0,
+                              "data": {
+                                "archives": [
+                                  {
+                                    "aid": 999,
+                                    "bvid": "BV1page2",
+                                    "title": "Page 2 Video",
+                                    "pic": "http://i0.hdslb.com/bfs/archive/p2.jpg",
+                                    "duration": 60
+                                  }
+                                ],
+                                "page": {
+                                  "page_num": 2,
+                                  "page_size": 30,
+                                  "total": 50
+                                }
+                              }
+                            }
+                            """, new byte[0], request.url());
+                }
+                return new Response(200, "OK", Collections.emptyMap(), "{\"code\":0,\"data\":{}}", new byte[0], request.url());
+            }
+
+            @Override
+            public CancellableCall executeAsync(@Nonnull Request request, AsyncCallback callback) {
+                return null;
+            }
+        };
+
+        NewPipe.init(mockDownloader);
+        try {
+            BilibiliPlaylistExtractor extractor = new BilibiliPlaylistExtractor(ServiceList.BiliBili, handler);
+            // extractor.onFetchPage() is deliberately NOT called here, mirroring getMoreItems
+            assertNull(extractor.data);
+
+            var pageResult = extractor.getPage(new org.schabi.newpipe.extractor.Page(page2Url));
+            assertNotNull(pageResult);
+            assertEquals(1, pageResult.getItems().size());
+            assertEquals("Page 2 Video", pageResult.getItems().get(0).getName());
+            assertNull(pageResult.getNextPage(), "Page 2 with total=50 should have no more pages");
+        } finally {
+            setUp();
+        }
+    }
 }
