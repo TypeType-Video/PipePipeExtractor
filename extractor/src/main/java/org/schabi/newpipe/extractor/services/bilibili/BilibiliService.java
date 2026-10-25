@@ -51,6 +51,7 @@ import static org.schabi.newpipe.extractor.NewPipe.getDownloader;
 import static org.schabi.newpipe.extractor.StreamingService.ServiceInfo.MediaCapability.*;
 import static org.schabi.newpipe.extractor.services.bilibili.utils.bytesToHex;
 
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -337,25 +338,41 @@ public class BilibiliService extends StreamingService {
 
     /**
      * Picks a stable, download-friendly URL out of a DASH stream entry.
-     * Prefers the primary address; falls back to any non M-CDN backup url;
-     * if every candidate is M-CDN, the primary is kept as a last resort.
+     * Prefers upos mirror hosts, which are warm on the CDN, then any other non M-CDN
+     * address, and keeps an M-CDN address only when nothing else is offered.
      *
      * @param primary   the stream's baseUrl/base_url
      * @param backupUrls the stream's backupUrl/backup_url list, may be empty
      */
     static public String pickStableStreamUrl(String primary, JsonArray backupUrls){
-        if (primary != null && !isMcdnUrl(primary)) {
-            return primary;
-        }
+        String best = null;
+        int bestRank = Integer.MAX_VALUE;
+        final List<String> candidates = new ArrayList<>();
+        candidates.add(primary);
         if (backupUrls != null) {
             for (int i = 0; i < backupUrls.size(); i++) {
-                final String candidate = backupUrls.getString(i);
-                if (candidate != null && !candidate.isEmpty() && !isMcdnUrl(candidate)) {
-                    return candidate;
-                }
+                candidates.add(backupUrls.getString(i));
             }
         }
-        return primary;
+        for (final String candidate : candidates) {
+            if (candidate == null || candidate.isEmpty()) {
+                continue;
+            }
+            final int rank = streamUrlRank(candidate);
+            if (rank < bestRank) {
+                best = candidate;
+                bestRank = rank;
+            }
+        }
+        return best != null ? best : primary;
+    }
+
+    private static int streamUrlRank(final String url) {
+        if (isMcdnUrl(url)) {
+            return 2;
+        }
+        final String host = url.replaceFirst("^[a-z]+://", "").split("[/:?]", 2)[0];
+        return host.startsWith("upos-") && host.contains("mirror") ? 0 : 1;
     }
 
     static public boolean isBiliBiliUrl(String url){
