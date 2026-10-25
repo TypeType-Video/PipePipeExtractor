@@ -46,6 +46,7 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
     private final ClientUserVideoImpl clientUserVideoImpl = new ClientUserVideoImpl();
     private final SearchUserVideoImpl searchUserVideoImpl = new SearchUserVideoImpl();
     private final WebUserVideoImpl webUserVideoImpl = new WebUserVideoImpl();
+    private UserVideoImpl fetchedVideoImpl;
 
     public String getSortOrder() {
         final List<FilterItem> sortFilter = getLinkHandler().getSortFilter();
@@ -87,7 +88,8 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
         Map<String, List<String>> headers = getHeaders(getOriginalUrl());
         String id = getId();
 
-        getVideoImpl().onFetchPage(downloader, id, getUrl(), getSortOrder());
+        fetchedVideoImpl = getVideoImpl();
+        fetchedVideoImpl.onFetchPage(downloader, id, getUrl(), getSortOrder());
 
         userInfoData = requestUserSpaceResponse(downloader, QUERY_USER_INFO_URL + id, headers);
 
@@ -108,7 +110,7 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
         if (userLiveData.getObject("data").getObject(getId()).getInt("live_status") != 0) {
             collector.commit(new BilibiliLiveInfoItemExtractor(userLiveData.getObject("data").getObject(getId()), 1));
         }
-        UserVideoImpl videoImpl = getVideoImpl();
+        UserVideoImpl videoImpl = fetchedVideoImpl != null ? fetchedVideoImpl : getVideoImpl();
         boolean hasVideos = videoImpl.getInitialPage(collector, this);
         Page nextPage = null;
         if (hasVideos) {
@@ -559,6 +561,14 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
     }
 
 
+    private static long riskControlCode(final String responseBody) {
+        try {
+            return JsonParser.object().from(responseBody).getLong("code", 0);
+        } catch (final JsonParserException e) {
+            return 0;
+        }
+    }
+
     public static JsonObject requestUserSpaceResponse(
             Downloader downloader,
             String url,
@@ -602,7 +612,7 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
                 + responseBody;
         rotateVideoApiMode();
         DeviceForger.regenerateRandomDevice(); // try to regenerate a new one
-        throw new ParsingException(msg);
+        throw new BilibiliRiskControlException(msg, riskControlCode(responseBody));
     }
 
 }

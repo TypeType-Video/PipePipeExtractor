@@ -51,6 +51,7 @@ import static org.schabi.newpipe.extractor.NewPipe.getDownloader;
 import static org.schabi.newpipe.extractor.StreamingService.ServiceInfo.MediaCapability.*;
 import static org.schabi.newpipe.extractor.services.bilibili.utils.bytesToHex;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
@@ -539,13 +540,14 @@ public class BilibiliService extends StreamingService {
     public static final int USER_VIDEO_API_MODE_CLIENT = 2;
     public static final int SIZE_USER_VIDEO_API_MODE = 3;
 
-    private static int userVideoApiMode = USER_VIDEO_API_MODE_WEB;
+    private static final AtomicInteger USER_VIDEO_API_MODE =
+            new AtomicInteger(USER_VIDEO_API_MODE_WEB);
 
     public static int getCurrentVideoApiMode() {
-        return userVideoApiMode;
+        return USER_VIDEO_API_MODE.get();
     }
 
     public static void rotateVideoApiMode() {
-        userVideoApiMode = (userVideoApiMode + 1) % SIZE_USER_VIDEO_API_MODE;
+        USER_VIDEO_API_MODE.updateAndGet(mode -> (mode + 1) % SIZE_USER_VIDEO_API_MODE);
     }
 }
