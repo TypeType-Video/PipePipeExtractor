@@ -173,10 +173,9 @@ public class NiconicoStreamExtractor extends StreamExtractor {
             return "";
         }
         if (isChannel()) {
-            return NiconicoService.CHANNEL_URL
-                    + watch.getObject("channel").getString("id");
+            return NiconicoService.CHANNEL_URL + getUploaderId();
         }
-        return NiconicoService.USER_URL + watch.getObject("owner").getLong("id");
+        return NiconicoService.USER_URL + getUploaderId();
     }
 
     @Nonnull
@@ -188,14 +187,16 @@ public class NiconicoStreamExtractor extends StreamExtractor {
         if (type == NiconicoWatchDataCache.WatchDataType.LOGIN) {
             return getName();
         }
-        if (isChannel()) {
-            String result = watch.getObject("channel").getString("name");
-            if (StringUtils.isEmpty(result)) {
-                return "Unknown";
-            }
-            return result;
+        String result = getJsonLdOwner().getString("name", "");
+        if (StringUtils.isEmpty(result)) {
+            result = isChannel()
+                    ? watch.getObject("channel").getString("name")
+                    : watch.getObject("owner").getString("nickname");
         }
-        return watch.getObject("owner").getString("nickname");
+        if (StringUtils.isEmpty(result)) {
+            return "Unknown";
+        }
+        return result;
     }
 
     @Nonnull
@@ -208,14 +209,15 @@ public class NiconicoStreamExtractor extends StreamExtractor {
             return getThumbnailUrl();
         }
         if (isChannel()) {
-            String result = watch.getObject("channel")
-                    .getObject("thumbnail").getString("url");
+            String result = getJsonLdOwner().getString("iconUrl",
+                    watch.getObject("channel").getObject("thumbnail").getString("url"));
             if (StringUtils.isEmpty(result)) {
                 return "";
             }
             return result;
         }
-        return watch.getObject("owner").getString("iconUrl");
+        return getJsonLdOwner().getString("iconUrl",
+                watch.getObject("owner").getString("iconUrl", ""));
     }
 
     @Override
@@ -227,9 +229,16 @@ public class NiconicoStreamExtractor extends StreamExtractor {
         ArrayList<String> audios = (ArrayList<String>) streamSources.get("audio");
         for (String audio : audios) {
             String id = RegexUtils.extract(audio, "audio-(.*?)-\\d+kbps");
+            final String kbps = id.split("-")[2].split("kbps")[0];
+            int averageBitrate = -1;
+            try {
+                averageBitrate = Integer.parseInt(kbps);
+            } catch (final NumberFormatException ignored) {
+            }
             audioStreams.add(new AudioStream.Builder().setId("Niconico-" + getId() + "-audio")
                     .setContent(audio, true)
-                    .setMediaFormat(MediaFormat.M4A).setQuality(id.split("-")[2].split("kbps")[0]).build());
+                    .setMediaFormat(MediaFormat.M4A).setQuality(kbps)
+                    .setAverageBitrate(averageBitrate).build());
         }
         return audioStreams;
     }
@@ -333,7 +342,9 @@ public class NiconicoStreamExtractor extends StreamExtractor {
         if (type == NiconicoWatchDataCache.WatchDataType.LOGIN) {
             return tags;
         }
-        final JsonArray items = watch.getObject("tag").getArray("items");
+        final JsonObject tagsObject = watch.has("tags")
+                ? watch.getObject("tags") : watch.getObject("tag");
+        final JsonArray items = tagsObject.getArray("items");
         return items.stream()
                 .filter(s -> s instanceof JsonObject)
                 .map(s -> (JsonObject) s)
@@ -430,15 +441,32 @@ public class NiconicoStreamExtractor extends StreamExtractor {
         niconicoWatchDataCache.setStartAt(-1);
         niconicoWatchDataCache.setThreadServer(null);
 
+        final JsonObject media = watch.getObject("media");
+        // the stream sources are in media.contents since NicoNico's October 2026 change
+        final JsonObject mediaContents = media.has("contents")
+                ? media.getObject("contents") : media.getObject("domand");
+        final JsonArray availableVideos = new JsonArray();
+        for (final Object video : mediaContents.getArray("videos")) {
+            if (video instanceof JsonObject && ((JsonObject) video).getBoolean("isAvailable")) {
+                availableVideos.add(video);
+            }
+        }
+        String audioResolutionName = null;
+        for (final Object audio : mediaContents.getArray("audios")) {
+            if (audio instanceof JsonObject && ((JsonObject) audio).getBoolean("isAvailable")) {
+                audioResolutionName = ((JsonObject) audio).getString("id");
+                break;
+            }
+        }
+        if (audioResolutionName == null) {
+            throw new ParsingException("No available audio stream");
+        }
+
         JsonStringWriter resolutionObject = JsonWriter.string().object()
                 .array("outputs");
-        String audioResolutionName = watch.getObject("media").getObject("domand").getArray("audios").stream().filter(s -> ((JsonObject) s).getBoolean("isAvailable")).map(s -> (JsonObject) s).findFirst().get().getString("id");
-        for (int i = 0; i < watch.getObject("media").getObject("domand").getArray("videos").size(); i++) {
-            if (!watch.getObject("media").getObject("domand").getArray("videos").getObject(i).getBoolean("isAvailable")) {
-                continue;
-            }
+        for (final Object video : availableVideos) {
             resolutionObject.array()
-                    .value(watch.getObject("media").getObject("domand").getArray("videos").getObject(i).getString("id"))
+                    .value(((JsonObject) video).getString("id"))
                     .value(audioResolutionName)
                     .end();
         }
@@ -446,15 +474,23 @@ public class NiconicoStreamExtractor extends StreamExtractor {
         String resolutionObjectString = resolutionObject.end().end().done();
         Response response = null;
         try {
-            Map<String, List<String>> headers = NiconicoService.getStreamSourceHeaders(watch.getObject("media").getObject("domand").getString("accessRightKey"));
+            final String accessRightKey = media.has("accessRightKey")
+                    ? media.getString("accessRightKey")
+                    : media.getObject("domand").getString("accessRightKey");
+            Map<String, List<String>> headers = NiconicoService.getStreamSourceHeaders(accessRightKey);
             headers.put("Cookie", Collections.singletonList(niconicoWatchDataCache.getStreamCookie()));
             response = downloader.post("https://nvapi.nicovideo.jp/v1/watch/" + getId() + "/access-rights/hls?actionTrackId=" + watch.getObject("client").getString("watchTrackId"), headers, resolutionObjectString.getBytes(StandardCharsets.UTF_8));
             if (response.responseCode() / 100 != 2) {
                 niconicoWatchDataCache.invalidate();
                 throw new ExtractionException("Token expired. Please retry.");
             }
-            Matcher matcher = Pattern.compile("(domand_bid=[^;]+)").matcher(response.responseHeaders().get("Set-Cookie").get(0));
-            matcher.find();
+            final String setCookie = response.getHeader("Set-Cookie");
+            if (setCookie != null) {
+                final Matcher matcher = Pattern.compile("(domand_bid=[^;]+)").matcher(setCookie);
+                if (matcher.find()) {
+                    niconicoWatchDataCache.setStreamCookie(matcher.group(0));
+                }
+            }
             String responseBody2 = response.responseBody();
             if (response.getHeader("Content-Encoding") != null && response.getHeader("Content-Encoding").contains("gzip")) {
                 try {
@@ -467,7 +503,6 @@ public class NiconicoStreamExtractor extends StreamExtractor {
             if (response.responseCode() / 100 == 2) {
                 streamSources = M3U8Parser.parseMasterM3U8(utils.decompressBrotli(response.rawResponseBody()), niconicoWatchDataCache.getStreamCookie(), getLength());
             }
-            niconicoWatchDataCache.setStreamCookie(matcher.group(0));
             headers.put("Cookie", Collections.singletonList(niconicoWatchDataCache.getStreamCookie()));
             if (response.responseCode() / 100 != 2) {
                 response = downloader.post("https://nvapi.nicovideo.jp/v1/watch/" + getId() + "/access-rights/hls?actionTrackId=" + watch.getObject("client").getString("watchTrackId"), headers, resolutionObjectString.getBytes(StandardCharsets.UTF_8));
@@ -506,7 +541,31 @@ public class NiconicoStreamExtractor extends StreamExtractor {
     }
 
     private Boolean isChannel() {
+        if (watch.has("metadata")) {
+            return "channel".equals(getJsonLdOwner().getString("type"));
+        }
         return watch.isNull("owner");
+    }
+
+    /**
+     * Returns the uploader information embedded in the page's structured data.
+     * It replaced the owner/channel objects of the watch data in October 2026.
+     */
+    @Nonnull
+    private JsonObject getJsonLdOwner() {
+        return watch.getObject("metadata").getObject("jsonLd").getObject("owner");
+    }
+
+    @Nonnull
+    private String getUploaderId() {
+        final String jsonLdId = getJsonLdOwner().getString("id", "");
+        if (!jsonLdId.isEmpty()) {
+            return jsonLdId;
+        }
+        if (isChannel()) {
+            return watch.getObject("channel").getString("id");
+        }
+        return watch.getObject("owner").getString("id");
     }
 
     @Override

@@ -11,6 +11,7 @@ import com.grack.nanojson.JsonParserException;
 import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.MediaFormat;
 import org.schabi.newpipe.extractor.NewPipe;
+import org.schabi.newpipe.extractor.ServiceList;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.downloader.Response;
@@ -329,6 +330,9 @@ public class PeertubeStreamExtractor extends StreamExtractor {
             final StreamInfoItemsCollector collector = new StreamInfoItemsCollector(
                     getServiceId());
             getStreamsFromApi(collector, apiUrl);
+            if (ServiceList.PeerTube.getFilterTypes().contains("related_item")) {
+                collector.applyBlocking(ServiceList.PeerTube.getFilterConfig());
+            }
             return collector;
         }
     }
@@ -622,8 +626,9 @@ public class PeertubeStreamExtractor extends StreamExtractor {
             }
         }
 
-        // Finally, add torrent URLs
-        final String torrentUrl = JsonUtils.getString(streamJsonObject, "torrentUrl");
+        // Finally, add torrent URLs, which files do not always have (e.g. the files of federated
+        // videos on PeerTube 8.3)
+        final String torrentUrl = streamJsonObject.getString("torrentUrl");
         if (!isNullOrEmpty(torrentUrl)) {
             audioStreams.add(new AudioStream.Builder()
                     .setId(id + "-" + idSuffix + "-" + DeliveryMethod.TORRENT)
@@ -687,8 +692,9 @@ public class PeertubeStreamExtractor extends StreamExtractor {
             }
         }
 
-        // Add finally torrent URLs
-        final String torrentUrl = JsonUtils.getString(streamJsonObject, "torrentUrl");
+        // Add finally torrent URLs, which files do not always have (e.g. the files of federated
+        // videos on PeerTube 8.3)
+        final String torrentUrl = streamJsonObject.getString("torrentUrl");
         if (!isNullOrEmpty(torrentUrl)) {
             streamList.add(new VideoStream.Builder()
                     .setId(id + "-" + idSuffix + "-" + DeliveryMethod.TORRENT)

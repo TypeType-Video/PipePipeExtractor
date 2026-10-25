@@ -54,8 +54,20 @@ public interface BulletCommentsInfoItemExtractor extends InfoItemExtractor {
         return 0.7;
     }
 
+    /** Paid amount text of a super chat, null for normal comments. */
+    default String getAmountText() throws ParsingException {
+        return null;
+    }
+
     default int getLastingTime() {
         return -1;
+    }
+
+    /**
+     * @return how long a super chat stays pinned, in milliseconds. 0 if it is not pinned.
+     */
+    default long getPinnedTimeMillis() {
+        return 0;
     }
 
     default boolean isLive() throws ParsingException {

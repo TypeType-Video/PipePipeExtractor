@@ -78,6 +78,31 @@ public final class PeertubeParsingHelper {
     }
 
     /**
+     * Get the id of an account, as used for the uploader ids of items.
+     *
+     * <p>
+     * The id is {@code accounts/<name>@<host>}: the channel link handler id of the uploader URL
+     * every item builds for its account. It is therefore the same on every instance the account
+     * is seen from, and equal to the id of the account's channel page opened from an item.
+     * </p>
+     *
+     * @param account an {@code account} or {@code ownerAccount} object
+     * @return the id of the account, or {@code null} if the object has no name or host
+     */
+    @Nullable
+    public static String getAccountId(@Nullable final JsonObject account) {
+        if (account == null) {
+            return null;
+        }
+        final String name = account.getString("name");
+        final String host = account.getString("host");
+        if (Utils.isNullOrEmpty(name) || Utils.isNullOrEmpty(host)) {
+            return null;
+        }
+        return "accounts/" + name + "@" + host;
+    }
+
+    /**
      * Get the avatars of an owner account or a video channel.
      *
      * <p>
@@ -281,7 +306,8 @@ public final class PeertubeParsingHelper {
      * @param collector the collector used to collect information
      * @param json      the JSON response to retrieve data from
      * @param baseUrl   the base URL of the instance
-     * @param sepia     if we should use {@link PeertubeSepiaStreamInfoItemExtractor} for streams
+     * @param sepia     if the items are SepiaSearch results, which are served by their own
+     *                  instance (streams use {@link PeertubeSepiaStreamInfoItemExtractor})
      */
     public static void collectItemsFrom(final InfoItemsCollector collector,
                                         final JsonObject json,
@@ -304,7 +330,8 @@ public final class PeertubeParsingHelper {
                 }
 
                 if (item.has("videosLength")) {
-                    collector.commit(new PeertubePlaylistInfoItemExtractor(item, baseUrl));
+                    collector.commit(new PeertubePlaylistInfoItemExtractor(item,
+                            sepia ? getSepiaResultBaseUrl(item, baseUrl) : baseUrl));
                 } else if (item.has("followingCount")) {
                     collector.commit(new PeertubeChannelInfoItemExtractor(item, baseUrl));
                 } else if (sepia) {
@@ -314,6 +341,28 @@ public final class PeertubeParsingHelper {
                 }
             }
         }
+    }
+
+    /**
+     * Get the base URL of the instance a SepiaSearch result is served by.
+     *
+     * <p>
+     * SepiaSearch only indexes content: the result's own instance is its embed URL without the
+     * embed path. Used for every kind of SepiaSearch result, so the rule exists only once.
+     * </p>
+     *
+     * @param item     a SepiaSearch result
+     * @param fallback the base URL to use if the result has no usable embed URL
+     * @return the base URL of the result's instance
+     */
+    public static String getSepiaResultBaseUrl(final JsonObject item, final String fallback) {
+        final String embedUrl = item.getString("embedUrl");
+        final String embedPath = item.getString("embedPath");
+        if (Utils.isNullOrEmpty(embedUrl) || Utils.isNullOrEmpty(embedPath)
+                || !embedUrl.endsWith(embedPath)) {
+            return fallback;
+        }
+        return embedUrl.substring(0, embedUrl.length() - embedPath.length());
     }
 
 }

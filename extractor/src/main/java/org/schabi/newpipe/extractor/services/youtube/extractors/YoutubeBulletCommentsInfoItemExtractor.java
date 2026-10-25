@@ -25,8 +25,11 @@ public class YoutubeBulletCommentsInfoItemExtractor implements BulletCommentsInf
         JsonArray array = data.getObject("message").getArray("runs");
         StringBuilder result = new StringBuilder();
         for(int i = 0; i< array.size(); i++){
-            if(array.getObject(i).has("text")){
-                result.append(array.getObject(i).getString("text"));
+            final JsonObject run = array.getObject(i);
+            if(run.has("text")){
+                result.append(run.getString("text"));
+            } else if (run.has("emoji")) {
+                result.append(getEmojiText(run.getObject("emoji")));
             }
         }
         return result.toString().replaceAll("□", "");
@@ -41,7 +44,7 @@ public class YoutubeBulletCommentsInfoItemExtractor implements BulletCommentsInf
     }
 
     @Override
-    public String getAuthorAvatarUrl() {
+    public String getAuthorAvatarUrl() throws ParsingException {
         final JsonArray thumbnails = data.getObject("authorPhoto").getArray("thumbnails");
         return thumbnails.isEmpty() ? null : thumbnails.getObject(thumbnails.size() - 1)
                 .getString("url");
@@ -58,6 +61,21 @@ public class YoutubeBulletCommentsInfoItemExtractor implements BulletCommentsInf
             }
         }
         return false;
+    }
+
+    /** Unicode emoji are their own label; custom emoji are described by their label. */
+    private static String getEmojiText(final JsonObject emoji) {
+        final String label = emoji.getObject("image").getObject("accessibility")
+                .getObject("accessibilityData").getString("label", "");
+        if (!label.isEmpty()) {
+            return emoji.getBoolean("isCustomEmoji") ? ":" + label + ":" : label;
+        }
+        final String emojiId = emoji.getString("emojiId", "");
+        if (!emojiId.isEmpty() && !emojiId.contains("/")) {
+            return emojiId;
+        }
+        final JsonArray shortcuts = emoji.getArray("shortcuts");
+        return shortcuts.isEmpty() ? "" : shortcuts.getString(0, "");
     }
 
     @Override
