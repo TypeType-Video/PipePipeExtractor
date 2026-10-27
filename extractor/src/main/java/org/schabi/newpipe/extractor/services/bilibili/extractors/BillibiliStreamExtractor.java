@@ -12,6 +12,7 @@ import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.exceptions.*;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
+import org.schabi.newpipe.extractor.services.bilibili.BilibiliMediaUrls;
 import org.schabi.newpipe.extractor.services.bilibili.BilibiliService;
 import org.schabi.newpipe.extractor.services.bilibili.WatchDataCache;
 import org.schabi.newpipe.extractor.services.bilibili.linkHandler.BilibiliChannelLinkHandlerFactory;
@@ -363,7 +364,9 @@ public class BillibiliStreamExtractor extends StreamExtractor {
             JsonArray backupUrls = object.getArray("backupUrl").isEmpty()
                     ? object.getArray("backup_url")
                     : object.getArray("backupUrl");
-            videoOnlyStreams.add(new VideoStream.Builder().setContent(pickStableStreamUrl(object.getString("baseUrl"), backupUrls), true)
+            BilibiliMediaUrls mediaUrls = BilibiliMediaUrls.from(object.getString("baseUrl"), backupUrls);
+            videoOnlyStreams.add(new VideoStream.Builder().setContent(mediaUrls.getSelectedUrl(), true)
+                    .setDeliveryMethodInfo(mediaUrls)
                     .setMediaFormat(MediaFormat.MPEG_4).setId("bilibili-" + bvid + "-video").setCodec(object.getString("codecs"))
                     .setBitrate(object.getInt("bandwidth"))
                     .setInitStart(initialization[0]).setInitEnd(initialization[1])
