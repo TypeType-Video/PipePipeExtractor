@@ -13,6 +13,7 @@ class BilibiliVerificationTest {
         assertTrue(BilibiliVerification.isVerified(json("{\"official_verify\":{\"type\":0,\"desc\":\"creator\"}}")));
         assertTrue(BilibiliVerification.isVerified(json("{\"official_verify\":{\"type\":1,\"desc\":\"media\"}}")));
         assertFalse(BilibiliVerification.isVerified(json("{\"official_verify\":{\"type\":-1,\"desc\":\"\"}}")));
+        assertFalse(BilibiliVerification.isVerified(json("{\"official_verify\":{\"type\":127,\"desc\":\"\"}}")));
     }
 
     @Test

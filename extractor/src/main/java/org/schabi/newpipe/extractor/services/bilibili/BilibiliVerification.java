@@ -4,6 +4,8 @@ import com.grack.nanojson.JsonObject;
 
 public final class BilibiliVerification {
     private static final String[] VERIFICATION_KEYS = {"official_verify", "Official"};
+    private static final int PERSONAL = 0;
+    private static final int ORGANIZATION = 1;
 
     private BilibiliVerification() {
     }
@@ -14,9 +16,11 @@ public final class BilibiliVerification {
         }
         for (final String key : VERIFICATION_KEYS) {
             final Object verification = owner.get(key);
-            if (verification instanceof JsonObject
-                    && ((JsonObject) verification).getInt("type", -1) >= 0) {
-                return true;
+            if (verification instanceof JsonObject) {
+                final int type = ((JsonObject) verification).getInt("type", -1);
+                if (type == PERSONAL || type == ORGANIZATION) {
+                    return true;
+                }
             }
         }
         return false;
