@@ -20,6 +20,7 @@ import org.schabi.newpipe.extractor.linkhandler.ChannelTabs;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
 import org.schabi.newpipe.extractor.search.filter.Filter;
 import org.schabi.newpipe.extractor.search.filter.FilterItem;
+import org.schabi.newpipe.extractor.services.bilibili.BilibiliVerification;
 import org.schabi.newpipe.extractor.services.bilibili.BilibiliService;
 import org.schabi.newpipe.extractor.services.bilibili.DeviceForger;
 import org.schabi.newpipe.extractor.services.bilibili.linkHandler.BilibiliChannelLinkHandlerFactory;
@@ -100,6 +101,11 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
     @Override
     public String getName() throws ParsingException {
         return userInfoData.getObject("data").getObject("card").getString("name");
+    }
+
+    @Override
+    public boolean isVerified() throws ParsingException {
+        return BilibiliVerification.isVerified(userInfoData.getObject("data").getObject("card"));
     }
 
     @Nonnull
