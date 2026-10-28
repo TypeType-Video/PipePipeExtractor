@@ -33,6 +33,7 @@ public class BilibiliPlaylistExtractor extends PlaylistExtractor {
     public JsonObject data;
     public String type;
     private String firstPageApiUrl = "";
+    private String currentPageUrl = "";
     private JsonObject userData;
 
     public BilibiliPlaylistExtractor(StreamingService service, ListLinkHandler linkHandler) {
@@ -108,6 +109,7 @@ public class BilibiliPlaylistExtractor extends PlaylistExtractor {
     public InfoItemsPage<StreamInfoItem> getPage(Page page) throws IOException, ExtractionException {
         // Partitions have only 1 page
         type = page.getUrl().contains(GET_SEASON_ARCHIVES_ARCHIVE_BASE_URL) ? "seasons_archives" : "archives";
+        currentPageUrl = page.getUrl();
         try {
             if (!(page.getUrl().contains("pn=1") || page.getUrl().contains("page_num=1"))) {
                 data = JsonParser.object().from(getDownloader().get(page.getUrl(), getHeaders(getOriginalUrl())).responseBody()).getObject("data");
@@ -204,12 +206,15 @@ public class BilibiliPlaylistExtractor extends PlaylistExtractor {
 
     private String getUserInfoRequestUrl() {
         String uid = null;
-        // Get from JSON directly
-        if (data != null) {
+        if (data != null && data.getObject("meta") != null) {
             uid = data.getObject("meta").getString("mid");
         }
-        // Use fallback
-        if (uid == null) uid = utils.getMidFromRecordApiUrl(firstPageApiUrl);
+        if (uid == null) uid = midFromUrl(firstPageApiUrl);
+        if (uid == null) uid = midFromUrl(currentPageUrl);
         return QUERY_USER_INFO_URL + uid;
+    }
+
+    private static String midFromUrl(final String url) {
+        return url != null && url.contains("mid=") ? utils.getMidFromRecordApiUrl(url) : null;
     }
 }
