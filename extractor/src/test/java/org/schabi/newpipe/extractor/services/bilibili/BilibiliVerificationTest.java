@@ -3,8 +3,11 @@ package org.schabi.newpipe.extractor.services.bilibili;
 import com.grack.nanojson.JsonObject;
 import com.grack.nanojson.JsonParser;
 import org.junit.jupiter.api.Test;
+import org.schabi.newpipe.extractor.channel.ChannelVerification;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BilibiliVerificationTest {
@@ -26,6 +29,15 @@ class BilibiliVerificationTest {
     void missingVerificationIsNotVerified() throws Exception {
         assertFalse(BilibiliVerification.isVerified(json("{\"uname\":\"fan\"}")));
         assertFalse(BilibiliVerification.isVerified(null));
+    }
+
+    @Test
+    void verificationKindFollowsTheBilibiliType() throws Exception {
+        assertEquals(ChannelVerification.PERSONAL,
+                BilibiliVerification.verification(json("{\"official_verify\":{\"type\":0}}")));
+        assertEquals(ChannelVerification.ORGANIZATION,
+                BilibiliVerification.verification(json("{\"Official\":{\"type\":1}}")));
+        assertNull(BilibiliVerification.verification(json("{\"official_verify\":{\"type\":127}}")));
     }
 
     private static JsonObject json(final String source) throws Exception {

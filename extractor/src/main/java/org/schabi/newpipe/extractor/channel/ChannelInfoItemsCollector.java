@@ -66,6 +66,11 @@ public final class ChannelInfoItemsCollector
         } catch (final Exception e) {
             addError(e);
         }
+        try {
+            resultItem.setVerification(extractor.getVerification());
+        } catch (final Exception e) {
+            addError(e);
+        }
 
         return resultItem;
     }

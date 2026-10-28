@@ -31,6 +31,7 @@ public class ChannelInfoItem extends InfoItem {
     private long subscriberCount = -1;
     private long streamCount = -1;
     private boolean verified = false;
+    private ChannelVerification verification;
 
     public ChannelInfoItem(final int serviceId, final String url, final String name) {
         super(InfoType.CHANNEL, serviceId, url, name);
@@ -79,5 +80,13 @@ public class ChannelInfoItem extends InfoItem {
 
     public void setVerified(final boolean verified) {
         this.verified = verified;
+    }
+
+    public ChannelVerification getVerification() {
+        return verification;
+    }
+
+    public void setVerification(final ChannelVerification verification) {
+        this.verification = verification;
     }
 }

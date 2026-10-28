@@ -148,6 +148,12 @@ public class ChannelInfo extends ListInfo<StreamInfoItem> {
         }
 
         try {
+            info.setVerification(extractor.getVerification());
+        } catch (final Exception e) {
+            info.addError(e);
+        }
+
+        try {
             info.setTabs(extractor.getTabs());
         } catch (final Exception e) {
             info.addError(e);
@@ -176,6 +182,7 @@ public class ChannelInfo extends ListInfo<StreamInfoItem> {
     private String description;
     private String[] donationLinks;
     private boolean verified;
+    private ChannelVerification verification;
 
     private List<ListLinkHandler> tabs = Collections.emptyList();
 
@@ -270,6 +277,14 @@ public class ChannelInfo extends ListInfo<StreamInfoItem> {
 
     public void setVerified(final boolean verified) {
         this.verified = verified;
+    }
+
+    public ChannelVerification getVerification() {
+        return verification;
+    }
+
+    public void setVerification(final ChannelVerification verification) {
+        this.verification = verification;
     }
 
     @Nonnull

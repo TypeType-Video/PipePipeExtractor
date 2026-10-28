@@ -92,6 +92,10 @@ public abstract class ChannelExtractor extends ListExtractor<StreamInfoItem> {
         return false;
     }
 
+    public ChannelVerification getVerification() throws ParsingException {
+        return null;
+    }
+
     @Nonnull
     public List<ListLinkHandler> getTabs() throws ParsingException {
         return Collections.emptyList();

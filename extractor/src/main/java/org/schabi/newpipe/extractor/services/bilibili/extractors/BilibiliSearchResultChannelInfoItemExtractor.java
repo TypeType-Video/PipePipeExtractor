@@ -3,6 +3,7 @@ package org.schabi.newpipe.extractor.services.bilibili.extractors;
 import com.grack.nanojson.JsonObject;
 
 import org.schabi.newpipe.extractor.channel.ChannelInfoItemExtractor;
+import org.schabi.newpipe.extractor.channel.ChannelVerification;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.bilibili.BilibiliVerification;
 import org.schabi.newpipe.extractor.services.bilibili.linkHandler.BilibiliChannelLinkHandlerFactory;
@@ -56,5 +57,10 @@ public class BilibiliSearchResultChannelInfoItemExtractor implements ChannelInfo
     @Override
     public boolean isVerified() throws ParsingException {
         return BilibiliVerification.isVerified(data);
+    }
+
+    @Override
+    public ChannelVerification getVerification() {
+        return BilibiliVerification.verification(data);
     }
 }

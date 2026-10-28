@@ -12,6 +12,7 @@ import org.schabi.newpipe.extractor.Page;
 import org.schabi.newpipe.extractor.ServiceList;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.channel.ChannelExtractor;
+import org.schabi.newpipe.extractor.channel.ChannelVerification;
 import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
@@ -106,6 +107,11 @@ public class BilibiliChannelExtractor extends ChannelExtractor {
     @Override
     public boolean isVerified() throws ParsingException {
         return BilibiliVerification.isVerified(userInfoData.getObject("data").getObject("card"));
+    }
+
+    @Override
+    public ChannelVerification getVerification() {
+        return BilibiliVerification.verification(userInfoData.getObject("data").getObject("card"));
     }
 
     @Nonnull
