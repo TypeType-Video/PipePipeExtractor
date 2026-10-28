@@ -161,7 +161,7 @@ public class BilibiliPlaylistExtractor extends PlaylistExtractor {
                 return null;
             }
         }
-        return getUserInfoLazily().getObject("data").getObject("card").getString("face").replace("http:", "https:");
+        return getUserInfoLazily().getObject("data").getObject("card").getString("face", "").replace("http:", "https:");
     }
 
     @Override
