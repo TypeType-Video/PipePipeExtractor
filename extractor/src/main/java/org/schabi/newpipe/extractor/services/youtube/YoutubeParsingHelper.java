@@ -583,7 +583,8 @@ YoutubeParsingHelper {
                 .end().done().getBytes(StandardCharsets.UTF_8);
         // @formatter:on
 
-        final Map<String, List<String>> headers = getClientHeaders(WEB_CLIENT_ID, WEB_HARDCODED_CLIENT_VERSION);
+        final Map<String, List<String>> headers = new HashMap<>(
+                getClientHeaders(WEB_CLIENT_ID, WEB_HARDCODED_CLIENT_VERSION));
         headers.put("Content-Type", singletonList("application/json"));
 
         // This endpoint is fetched by the YouTube website to get the items of its main menu and is
@@ -703,8 +704,17 @@ YoutubeParsingHelper {
         // fingerprinting based on the client version used
         try {
             extractClientVersionFromSwJs();
-        } catch (final Exception e) {
-            extractClientVersionFromHtmlSearchResultsPage();
+        } catch (final Exception swJsException) {
+            try {
+                extractClientVersionFromHtmlSearchResultsPage();
+            } catch (final Exception htmlException) {
+                // e.g. a redirect loop ("Too many follow-up requests") on the search page must
+                // not prevent falling back to the hardcoded client version below
+                htmlException.addSuppressed(swJsException);
+                if (!isHardcodedClientVersionValid()) {
+                    throw htmlException;
+                }
+            }
         }
 
         if (clientVersionExtracted) {
@@ -2295,6 +2305,14 @@ YoutubeParsingHelper {
             final String alertText = getTextFromObject(alertRenderer.getObject("text"));
             final String alertType = alertRenderer.getString("type", "");
             if (alertType.equalsIgnoreCase("ERROR")) {
+                if (alertText != null && alertText.contains("siteshi kasitholakali")) {
+                    throw new ContentNotAvailableException(
+                            "Got error: \"This channel is unavailable.\"");
+                }
+                if (alertText != null && alertText.contains("siteshi asikho")) {
+                    throw new ContentNotAvailableException(
+                            "Got error: \"This channel does not exist.\"");
+                }
                 if (alertText != null
                         && (alertText.contains("This account has been terminated")
                         || alertText.contains("This channel was removed"))) {

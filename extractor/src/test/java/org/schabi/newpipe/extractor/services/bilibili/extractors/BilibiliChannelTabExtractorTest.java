@@ -98,7 +98,7 @@ class BilibiliChannelTabExtractorTest {
         assertTrue(items.get(1) instanceof PlaylistInfoItem);
         PlaylistInfoItem series = (PlaylistInfoItem) items.get(1);
         assertEquals("一轮复习", series.getName());
-        assertEquals("https://www.bilibili.com/medialist/play/23630128?business=space_series&business_id=340933", series.getUrl());
+        assertEquals("https://www.bilibili.com/medialist/play/23630128?business=space_series&business_id=340933&name=%E4%B8%80%E8%BD%AE%E5%A4%8D%E4%B9%A0", series.getUrl());
         assertEquals("https://i1.hdslb.com/cover2.jpg", series.getThumbnailUrl());
         assertEquals(13, series.getStreamCount());
 

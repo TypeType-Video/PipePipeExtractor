@@ -6,14 +6,15 @@ import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.utils.Utils;
 
 import java.net.MalformedURLException;
+
 final class BilibiliStreamPageParser {
     private BilibiliStreamPageParser() {
     }
 
     static JsonObject pageForUrl(final JsonObject watch, final String streamUrl)
             throws ParsingException {
-        final JsonArray pages = watch.getArray("pages");
-        if (pages == null || pages.size() == 0) {
+        final JsonArray pages = watch == null ? null : watch.getArray("pages");
+        if (pages == null || pages.isEmpty()) {
             throw new ParsingException("BiliBili video has no pages");
         }
 

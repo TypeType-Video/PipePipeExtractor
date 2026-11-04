@@ -12,23 +12,28 @@ class BilibiliPlaylistLinkHandlerFactoryTest {
     private final BilibiliPlaylistLinkHandlerFactory factory = new BilibiliPlaylistLinkHandlerFactory();
 
     @Test
-    void collectionMedialistUrlResolvesToSeasonApi() throws ParsingException {
+    void collectionMedialistUrlResolvesToSeason() throws ParsingException {
         final String url = "https://www.bilibili.com/medialist/play/23630128?business=space_collection&business_id=2216020";
 
         assertTrue(factory.onAcceptUrl(url));
         final ListLinkHandler handler = factory.fromUrl(url);
-        assertEquals(url, handler.getUrl());
-        assertEquals("https://api.bilibili.com/x/polymer/web-space/seasons_archives_list?mid=23630128&season_id=2216020&sort_reverse=false&page_num=1&page_size=30",
-                BilibiliPlaylistLinkHandlerFactory.toApiUrl(handler.getUrl()));
+        final BilibiliPlaylistLinkHandlerFactory.PlaylistTarget target =
+                BilibiliPlaylistLinkHandlerFactory.parseTarget(handler.getUrl());
+        assertEquals("seasons_archives", target.type);
+        assertEquals("23630128", target.mid);
+        assertEquals("2216020", target.id);
     }
 
     @Test
-    void seriesMedialistUrlResolvesToSeriesApi() throws ParsingException {
+    void seriesMedialistUrlResolvesToSeries() throws ParsingException {
         final String url = "https://www.bilibili.com/medialist/play/23630128?business=space_series&business_id=340933";
 
         assertTrue(factory.onAcceptUrl(url));
-        assertEquals("https://api.bilibili.com/x/series/archives?mid=23630128&series_id=340933&only_normal=true&sort=desc&pn=1&ps=30",
-                BilibiliPlaylistLinkHandlerFactory.toApiUrl(url));
+        final BilibiliPlaylistLinkHandlerFactory.PlaylistTarget target =
+                BilibiliPlaylistLinkHandlerFactory.parseTarget(url);
+        assertEquals("series", target.type);
+        assertEquals("23630128", target.mid);
+        assertEquals("340933", target.id);
     }
 
     @Test
