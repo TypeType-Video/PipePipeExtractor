@@ -122,6 +122,21 @@ public final class CommentsInfoItemsCollector
             addError(e);
         }
         try {
+            resultItem.setPictureExternalId(extractor.getPictureExternalId());
+        } catch (final Exception e) {
+            addError(e);
+        }
+        try {
+            resultItem.setPictureUnavailableText(extractor.getPictureUnavailableText());
+        } catch (final Exception e) {
+            addError(e);
+        }
+        try {
+            resultItem.setPictureUnsupportedText(extractor.getPictureUnsupportedText());
+        } catch (final Exception e) {
+            addError(e);
+        }
+        try {
             resultItem.setAudioAttachment(extractor.getAudioAttachment());
         } catch (final Exception e) {
             addError(e);

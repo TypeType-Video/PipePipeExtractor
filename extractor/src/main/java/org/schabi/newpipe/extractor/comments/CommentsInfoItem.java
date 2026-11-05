@@ -41,6 +41,12 @@ public class CommentsInfoItem extends InfoItem {
     private String pictureFormatHint = "";
     @Nonnull
     private PictureAnimation pictureAnimation = PictureAnimation.UNKNOWN;
+    @Nonnull
+    private String pictureExternalId = "";
+    @Nonnull
+    private String pictureUnavailableText = "";
+    @Nonnull
+    private String pictureUnsupportedText = "";
     @Nullable
     private CommentAudioAttachment audioAttachment;
 
@@ -61,6 +67,33 @@ public class CommentsInfoItem extends InfoItem {
 
     public void setPictureAnimation(@Nonnull final PictureAnimation animation) {
         pictureAnimation = animation;
+    }
+
+    @Nonnull
+    public String getPictureExternalId() {
+        return pictureExternalId;
+    }
+
+    public void setPictureExternalId(@Nonnull final String externalId) {
+        pictureExternalId = externalId;
+    }
+
+    @Nonnull
+    public String getPictureUnavailableText() {
+        return pictureUnavailableText;
+    }
+
+    public void setPictureUnavailableText(@Nonnull final String unavailableText) {
+        pictureUnavailableText = unavailableText;
+    }
+
+    @Nonnull
+    public String getPictureUnsupportedText() {
+        return pictureUnsupportedText;
+    }
+
+    public void setPictureUnsupportedText(@Nonnull final String unsupportedText) {
+        pictureUnsupportedText = unsupportedText;
     }
 
     /** A voice/audio attachment, or null when this is a regular comment. */

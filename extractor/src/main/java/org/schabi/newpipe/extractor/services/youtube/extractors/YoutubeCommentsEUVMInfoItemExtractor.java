@@ -144,11 +144,32 @@ class YoutubeCommentsEUVMInfoItemExtractor implements CommentsInfoItemExtractor 
                 : CommentsInfoItem.PictureAnimation.UNKNOWN;
     }
 
+    @Nonnull
+    @Override
+    public String getPictureExternalId() {
+        return getImageAttachmentViewModel().getString("externalImageId", "");
+    }
+
+    @Nonnull
+    @Override
+    public String getPictureUnavailableText() {
+        return getImageAttachmentViewModel().getString("unavailableText", "");
+    }
+
+    @Nonnull
+    @Override
+    public String getPictureUnsupportedText() {
+        return getImageAttachmentViewModel().getString("unsupportedText", "");
+    }
+
     private JsonObject getAttachedImage() {
+        return getImageAttachmentViewModel().getObject("image");
+    }
+
+    private JsonObject getImageAttachmentViewModel() {
         final JsonObject attachment = commentSurface.getObject("imageAttachmentViewModel");
-        final JsonObject view = attachment.has("commentImageAttachmentViewModel")
+        return attachment.has("commentImageAttachmentViewModel")
                 ? attachment.getObject("commentImageAttachmentViewModel") : attachment;
-        return view.getObject("image");
     }
 
     @Nullable

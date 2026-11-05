@@ -8,6 +8,7 @@ import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
 import org.schabi.newpipe.extractor.localization.TimeAgoParser;
 import org.schabi.newpipe.extractor.stream.Description;
+import org.schabi.newpipe.extractor.utils.Utils;
 import org.jsoup.nodes.Entities;
 
 import java.util.ArrayList;
@@ -49,6 +50,8 @@ final class YoutubeCommunityPostParser {
         final List<List<Image>> media = new ArrayList<>();
         final List<CommunityPostInfoItem.PollChoice> choices = new ArrayList<>();
         String votes = "";
+        CommunityPostInfoItem.PollType pollType = CommunityPostInfoItem.PollType.UNKNOWN;
+        String pollStatus = "";
         String sharedUrl = "";
         String sharedTitle = "";
         List<Image> sharedPreviewImages = Collections.emptyList();
@@ -77,6 +80,8 @@ final class YoutubeCommunityPostParser {
                 }
             }
             votes = text(poll.getObject("totalVotes"));
+            pollType = parsePollType(poll.getString("type", ""));
+            pollStatus = post.getString("pollStatus", "");
         } else if (attachment.has("videoRenderer")) {
             type = CommunityPostInfoItem.PostType.VIDEO;
             final JsonObject video = attachment.getObject("videoRenderer");
@@ -102,7 +107,9 @@ final class YoutubeCommunityPostParser {
         return new CommunityPostInfoItem(serviceId, id, "https://www.youtube.com/post/" + id,
                 new Description(content == null ? "" : content, Description.HTML),
                 text(post.getObject("contentText")), author, channelId, authorUrl, avatars,
-                date, parseDate(timeAgoParser, date), likes, comments, type, media, choices, votes, sharedUrl,
+                date, parseDate(timeAgoParser, date), likes, parseCount(likes),
+                comments, parseCount(comments), type, media, choices, pollType, pollStatus,
+                votes, parseCount(votes), sharedUrl,
                 sharedTitle, sharedPreviewImages, sharedPost);
     }
 
@@ -133,10 +140,33 @@ final class YoutubeCommunityPostParser {
                 text(post.getObject("content")), author, authorId,
                 authorId.isEmpty() ? "" : "https://www.youtube.com/channel/" + authorId,
                 images(post.getObject("thumbnail")), date, parseDate(timeAgoParser, date),
-                "", "",
+                "", CommunityPostInfoItem.NO_COUNT, "", CommunityPostInfoItem.NO_COUNT,
                 CommunityPostInfoItem.PostType.SHARED_POST, Collections.emptyList(),
-                Collections.emptyList(), "", shared == null ? "" : shared.getUrl(),
+                Collections.emptyList(), CommunityPostInfoItem.PollType.UNKNOWN, "",
+                "", CommunityPostInfoItem.NO_COUNT, shared == null ? "" : shared.getUrl(),
                 "", Collections.emptyList(), shared);
+    }
+
+    private static CommunityPostInfoItem.PollType parsePollType(final String type) {
+        if (type.contains("QUIZ")) {
+            return CommunityPostInfoItem.PollType.QUIZ;
+        } else if (type.contains("IMAGE")) {
+            return CommunityPostInfoItem.PollType.IMAGE;
+        } else if (type.contains("TEXT")) {
+            return CommunityPostInfoItem.PollType.TEXT;
+        }
+        return CommunityPostInfoItem.PollType.UNKNOWN;
+    }
+
+    private static long parseCount(final String count) {
+        if (count.isEmpty()) {
+            return CommunityPostInfoItem.NO_COUNT;
+        }
+        try {
+            return Utils.mixedNumberWordToLong(count);
+        } catch (final Exception ignored) {
+            return CommunityPostInfoItem.NO_COUNT;
+        }
     }
 
     private static DateWrapper parseDate(final TimeAgoParser parser, final String text) {
