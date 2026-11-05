@@ -18,6 +18,7 @@ import org.schabi.newpipe.extractor.services.bilibili.WatchDataCache;
 import org.schabi.newpipe.extractor.services.bilibili.linkHandler.BilibiliChannelLinkHandlerFactory;
 import org.schabi.newpipe.extractor.services.bilibili.utils;
 import org.schabi.newpipe.extractor.stream.*;
+import org.schabi.newpipe.extractor.utils.BackgroundRequests;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -43,6 +45,7 @@ public class BillibiliStreamExtractor extends StreamExtractor {
     int duration = 0;
     JsonObject page = null;
     String bvid;
+    private Future<String> videoshotRequest;
     WatchDataCache watchDataCache;
     private boolean isRoundPlay;
     private JsonObject playData;
@@ -510,6 +513,10 @@ public class BillibiliStreamExtractor extends StreamExtractor {
             }
         } else {
             bvid = utils.getPureBV(getId());
+            final String videoshotUrl = VIDEOSHOT_API_URL + bvid;
+            final Map<String, List<String>> videoshotHeaders = getHeaders(getOriginalUrl());
+            videoshotRequest = BackgroundRequests.start(
+                    () -> downloader.get(videoshotUrl, videoshotHeaders).responseBody());
             final String metadataUrl =
                     "https://api.bilibili.com/x/web-interface/wbi/view?bvid=" + bvid;
             // Visitor cookies (buvid3/buvid4/...) are mandatory here: Bilibili's WAF answers
@@ -954,9 +961,10 @@ public class BillibiliStreamExtractor extends StreamExtractor {
         }
 
         try {
-            String videoshotUrl = VIDEOSHOT_API_URL + bvid;
-            
-            String response = getDownloader().get(videoshotUrl, getHeaders(getOriginalUrl())).responseBody();
+            final String response = videoshotRequest != null
+                    ? BackgroundRequests.await(videoshotRequest)
+                    : getDownloader().get(VIDEOSHOT_API_URL + bvid,
+                            getHeaders(getOriginalUrl())).responseBody();
             JsonObject responseJson = JsonParser.object().from(response);
             
             if (responseJson.getInt("code") != 0) {
