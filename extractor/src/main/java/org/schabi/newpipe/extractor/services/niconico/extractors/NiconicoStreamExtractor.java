@@ -50,8 +50,11 @@ import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import org.schabi.newpipe.extractor.utils.BackgroundRequests;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -67,6 +70,7 @@ public class NiconicoStreamExtractor extends StreamExtractor {
     private Document liveResponse;
     private JsonObject liveDataRoot;
     private Map<String, List<String>> streamSources;
+    private Future<String> relatedItemsRequest;
 
     public NiconicoStreamExtractor(final StreamingService service,
                                    final LinkHandler linkHandler,
@@ -403,9 +407,12 @@ public class NiconicoStreamExtractor extends StreamExtractor {
             }
             return collector;
         }
-        final String url = NiconicoService.RELATED_ITEMS_URL + getId();
+        final String body = relatedItemsRequest != null
+                ? BackgroundRequests.await(relatedItemsRequest)
+                : getDownloader().get(NiconicoService.RELATED_ITEMS_URL + getId(),
+                        NiconicoService.LOCALE).responseBody();
         try {
-            JsonArray data = JsonParser.object().from(getDownloader().get(url, NiconicoService.LOCALE).responseBody()).getObject("data").getArray("items");
+            JsonArray data = JsonParser.object().from(body).getObject("data").getArray("items");
             for (int i = 0; i < data.size(); i++) {
                 if (data.getObject(i).getString("contentType").equals("mylist")) {
                     continue; //TODO: handle playlist here
@@ -437,6 +444,9 @@ public class NiconicoStreamExtractor extends StreamExtractor {
             }
             return;
         }
+        final String relatedItemsUrl = NiconicoService.RELATED_ITEMS_URL + getId();
+        relatedItemsRequest = BackgroundRequests.start(
+                () -> downloader.get(relatedItemsUrl, NiconicoService.LOCALE).responseBody());
         watch = niconicoWatchDataCache.refreshAndGetWatchData(downloader, getId());
         niconicoWatchDataCache.setStartAt(-1);
         niconicoWatchDataCache.setThreadServer(null);
