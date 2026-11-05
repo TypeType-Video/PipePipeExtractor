@@ -150,6 +150,38 @@ public interface CommentsInfoItemExtractor extends InfoItemExtractor {
         return Collections.emptyList();
     }
 
+    /** Service-provided image format hint, or an empty string when unavailable. */
+    @Nonnull
+    default String getPictureFormatHint() throws ParsingException {
+        return "";
+    }
+
+    @Nonnull
+    default CommentsInfoItem.PictureAnimation getPictureAnimation() throws ParsingException {
+        return CommentsInfoItem.PictureAnimation.UNKNOWN;
+    }
+
+    @Nonnull
+    default String getPictureExternalId() throws ParsingException {
+        return "";
+    }
+
+    @Nonnull
+    default String getPictureUnavailableText() throws ParsingException {
+        return "";
+    }
+
+    @Nonnull
+    default String getPictureUnsupportedText() throws ParsingException {
+        return "";
+    }
+
+    /** A voice/audio attachment, or null when this is a regular comment. */
+    @Nullable
+    default CommentAudioAttachment getAudioAttachment() throws ParsingException {
+        return null;
+    }
+
     @Override
     default String getThumbnailUrl() throws ParsingException {
         return null;

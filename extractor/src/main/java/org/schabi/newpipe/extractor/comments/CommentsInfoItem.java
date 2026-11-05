@@ -14,6 +14,9 @@ import javax.annotation.Nullable;
 
 public class CommentsInfoItem extends InfoItem {
 
+    /** Whether the service identifies the comment's image attachment as animated. */
+    public enum PictureAnimation { UNKNOWN, ANIMATED }
+
     private String commentId;
     private Description commentText = Description.EMPTY_DESCRIPTION;
     private String uploaderName;
@@ -34,6 +37,74 @@ public class CommentsInfoItem extends InfoItem {
     private Page replies;
     @Nonnull
     private Collection<Image> pictures = Collections.emptyList();
+    @Nonnull
+    private String pictureFormatHint = "";
+    @Nonnull
+    private PictureAnimation pictureAnimation = PictureAnimation.UNKNOWN;
+    @Nonnull
+    private String pictureExternalId = "";
+    @Nonnull
+    private String pictureUnavailableText = "";
+    @Nonnull
+    private String pictureUnsupportedText = "";
+    @Nullable
+    private CommentAudioAttachment audioAttachment;
+
+    /** Service-provided format hint for the attachment, or an empty string if unavailable. */
+    @Nonnull
+    public String getPictureFormatHint() {
+        return pictureFormatHint;
+    }
+
+    public void setPictureFormatHint(@Nonnull final String hint) {
+        pictureFormatHint = hint;
+    }
+
+    @Nonnull
+    public PictureAnimation getPictureAnimation() {
+        return pictureAnimation;
+    }
+
+    public void setPictureAnimation(@Nonnull final PictureAnimation animation) {
+        pictureAnimation = animation;
+    }
+
+    @Nonnull
+    public String getPictureExternalId() {
+        return pictureExternalId;
+    }
+
+    public void setPictureExternalId(@Nonnull final String externalId) {
+        pictureExternalId = externalId;
+    }
+
+    @Nonnull
+    public String getPictureUnavailableText() {
+        return pictureUnavailableText;
+    }
+
+    public void setPictureUnavailableText(@Nonnull final String unavailableText) {
+        pictureUnavailableText = unavailableText;
+    }
+
+    @Nonnull
+    public String getPictureUnsupportedText() {
+        return pictureUnsupportedText;
+    }
+
+    public void setPictureUnsupportedText(@Nonnull final String unsupportedText) {
+        pictureUnsupportedText = unsupportedText;
+    }
+
+    /** A voice/audio attachment, or null when this is a regular comment. */
+    @Nullable
+    public CommentAudioAttachment getAudioAttachment() {
+        return audioAttachment;
+    }
+
+    public void setAudioAttachment(@Nullable final CommentAudioAttachment attachment) {
+        audioAttachment = attachment;
+    }
 
     public static final int NO_LIKE_COUNT = -1;
     public static final int NO_STREAM_POSITION = -1;
