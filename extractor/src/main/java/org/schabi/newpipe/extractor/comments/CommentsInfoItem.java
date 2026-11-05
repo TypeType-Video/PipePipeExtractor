@@ -41,6 +41,8 @@ public class CommentsInfoItem extends InfoItem {
     private String pictureFormatHint = "";
     @Nonnull
     private PictureAnimation pictureAnimation = PictureAnimation.UNKNOWN;
+    @Nullable
+    private CommentAudioAttachment audioAttachment;
 
     /** Service-provided format hint for the attachment, or an empty string if unavailable. */
     @Nonnull
@@ -59,6 +61,16 @@ public class CommentsInfoItem extends InfoItem {
 
     public void setPictureAnimation(@Nonnull final PictureAnimation animation) {
         pictureAnimation = animation;
+    }
+
+    /** A voice/audio attachment, or null when this is a regular comment. */
+    @Nullable
+    public CommentAudioAttachment getAudioAttachment() {
+        return audioAttachment;
+    }
+
+    public void setAudioAttachment(@Nullable final CommentAudioAttachment attachment) {
+        audioAttachment = attachment;
     }
 
     public static final int NO_LIKE_COUNT = -1;
