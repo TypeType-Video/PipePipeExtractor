@@ -52,6 +52,7 @@ final class YoutubeSabrRequestBuilder {
                 ? java.util.Collections.emptyList()
                 : streamState.getBufferedRanges();
         final boolean initialProbe = streamState != null
+                && !streamState.isAudioOnlyMedia()
                 && streamState.getRawPlaybackCookie() == null && playerTimeMs == 0;
         final List<SabrBufferedRange> requestBufferedRanges =
                 initialProbe

@@ -35,6 +35,7 @@ public final class YoutubeSabrStreamState {
     private boolean videoLastOnlyRange;
     private boolean lastOnlyRangesUseObservedTiming;
     private volatile int enabledTrackTypesBitfield = YoutubeSabrRequestBuilder.ENABLED_TRACK_TYPES_VIDEO_AND_AUDIO;
+    private volatile boolean audioOnlyMedia;
     private volatile boolean selectAudioFormat = true;
     private volatile boolean selectVideoFormat = true;
     private volatile boolean preferAudioFormat = true;
@@ -251,9 +252,9 @@ public final class YoutubeSabrStreamState {
         enabledTrackTypesBitfield = format.isVideo()
                 ? TRACK_MODE_VIDEO_ONLY : TRACK_MODE_AUDIO_ONLY;
         selectAudioFormat = true;
-        selectVideoFormat = true;
+        selectVideoFormat = !audioOnlyMedia;
         preferAudioFormat = true;
-        preferVideoFormat = true;
+        preferVideoFormat = !audioOnlyMedia;
         playerTimeMsOverride = Math.max(0, playerTimeMs);
         return snapshot;
     }
@@ -465,6 +466,9 @@ public final class YoutubeSabrStreamState {
     public synchronized void setRequestTrackMode(final int enabledTrackTypesBitfield,
                                                  final boolean selectAudioFormat,
                                                  final boolean selectVideoFormat) {
+        if (audioOnlyMedia && enabledTrackTypesBitfield != TRACK_MODE_AUDIO_ONLY) {
+            return;
+        }
         this.enabledTrackTypesBitfield = enabledTrackTypesBitfield;
         this.selectAudioFormat = selectAudioFormat;
         this.selectVideoFormat = selectVideoFormat;
@@ -474,8 +478,21 @@ public final class YoutubeSabrStreamState {
 
     synchronized void setPreferredTrackTypes(final boolean videoActive,
                                              final boolean audioActive) {
-        preferAudioFormat = audioActive;
-        preferVideoFormat = videoActive;
+        preferAudioFormat = audioActive || audioOnlyMedia;
+        preferVideoFormat = videoActive && !audioOnlyMedia;
+    }
+
+    /**
+     * Some media, such as comment voice replies, have no video format at all. Every request then
+     * stays audio-only and never names, selects or claims to have buffered a video track.
+     */
+    synchronized void setAudioOnlyMedia() {
+        setRequestTrackMode(TRACK_MODE_AUDIO_ONLY, true, false);
+        audioOnlyMedia = true;
+    }
+
+    public boolean isAudioOnlyMedia() {
+        return audioOnlyMedia;
     }
 
     public void setActiveTrackTypes(final boolean videoActive, final boolean audioActive) {

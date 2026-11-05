@@ -223,11 +223,13 @@ public final class YoutubeSabrSession {
             throw new IllegalArgumentException("SABR audio format must be audio: itag="
                     + audioFormat.getItag());
         }
-        if (!videoFormat.isVideo()) {
+        final boolean audioOnlyMedia = audioFormat.getItag() == videoFormat.getItag()
+                && info.getFormats().stream().noneMatch(YoutubeSabrFormat::isVideo);
+        if (!videoFormat.isVideo() && !audioOnlyMedia) {
             throw new IllegalArgumentException("SABR video format must be video: itag="
                     + videoFormat.getItag());
         }
-        if (audioFormat.getItag() == videoFormat.getItag()) {
+        if (audioFormat.getItag() == videoFormat.getItag() && !audioOnlyMedia) {
             throw new IllegalArgumentException("SABR audio/video formats must be distinct");
         }
         if (info.getServerAbrStreamingUrl() == null || info.getServerAbrStreamingUrl().isEmpty()) {
@@ -237,6 +239,9 @@ public final class YoutubeSabrSession {
         this.audioFormat = audioFormat;
         this.videoFormat = videoFormat;
         this.streamState = new YoutubeSabrStreamState(audioFormat, videoFormat);
+        if (audioOnlyMedia) {
+            streamState.setAudioOnlyMedia();
+        }
         this.poTokenProvider = poTokenProvider;
         this.segmentSpoolDirectory = segmentSpoolDirectory;
         this.sessionPolicyHost = sessionPolicyHost;
