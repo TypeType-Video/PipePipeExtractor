@@ -3,6 +3,7 @@ package org.schabi.newpipe.extractor.services.youtube.extractors;
 import com.grack.nanojson.JsonObject;
 import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.Page;
+import org.schabi.newpipe.extractor.comments.CommentsInfoItem;
 import org.schabi.newpipe.extractor.comments.CommentsInfoItemExtractor;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
@@ -12,6 +13,8 @@ import org.schabi.newpipe.extractor.utils.Utils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -39,6 +42,8 @@ class YoutubeCommentsEUVMInfoItemExtractor implements CommentsInfoItemExtractor 
     @Nonnull
     private final JsonObject engagementToolbarStateEntityPayload;
     @Nonnull
+    private final JsonObject commentSurface;
+    @Nonnull
     private final String videoUrl;
     @Nonnull
     private final TimeAgoParser timeAgoParser;
@@ -50,10 +55,23 @@ class YoutubeCommentsEUVMInfoItemExtractor implements CommentsInfoItemExtractor 
             @Nonnull final JsonObject engagementToolbarStateEntityPayload,
             @Nonnull final String videoUrl,
             @Nonnull final TimeAgoParser timeAgoParser) {
+        this(commentViewModel, commentRepliesRenderer, commentEntityPayload,
+                engagementToolbarStateEntityPayload, new JsonObject(), videoUrl, timeAgoParser);
+    }
+
+    YoutubeCommentsEUVMInfoItemExtractor(
+            @Nonnull final JsonObject commentViewModel,
+            @Nullable final JsonObject commentRepliesRenderer,
+            @Nonnull final JsonObject commentEntityPayload,
+            @Nonnull final JsonObject engagementToolbarStateEntityPayload,
+            @Nonnull final JsonObject commentSurface,
+            @Nonnull final String videoUrl,
+            @Nonnull final TimeAgoParser timeAgoParser) {
         this.commentViewModel = commentViewModel;
         this.commentRepliesRenderer = commentRepliesRenderer;
         this.commentEntityPayload = commentEntityPayload;
         this.engagementToolbarStateEntityPayload = engagementToolbarStateEntityPayload;
+        this.commentSurface = commentSurface;
         this.videoUrl = videoUrl;
         this.timeAgoParser = timeAgoParser;
     }
@@ -96,6 +114,40 @@ class YoutubeCommentsEUVMInfoItemExtractor implements CommentsInfoItemExtractor 
         return new Description(
                 attributedDescriptionToHtml(commentEntityPayload.getObject(PROPERTIES)
                         .getObject("content")), Description.HTML);
+    }
+
+    @Nonnull
+    @Override
+    public Collection<Image> getPictures() throws ParsingException {
+        final JsonObject image = getAttachedImage();
+        if (!image.getArray("sources").isEmpty()) {
+            return getImagesFromThumbnailsArray(image.getArray("sources"));
+        }
+        if (!image.getArray("thumbnails").isEmpty()) {
+            return getImagesFromThumbnailsArray(image.getArray("thumbnails"));
+        }
+        return Collections.emptyList();
+    }
+
+    @Nonnull
+    @Override
+    public String getPictureFormatHint() {
+        return getAttachedImage().getString("imageFormatHint", "");
+    }
+
+    @Nonnull
+    @Override
+    public CommentsInfoItem.PictureAnimation getPictureAnimation() {
+        return getPictureFormatHint().startsWith("IMAGE_FORMAT_ANIMATED_")
+                ? CommentsInfoItem.PictureAnimation.ANIMATED
+                : CommentsInfoItem.PictureAnimation.UNKNOWN;
+    }
+
+    private JsonObject getAttachedImage() {
+        final JsonObject attachment = commentSurface.getObject("imageAttachmentViewModel");
+        final JsonObject view = attachment.has("commentImageAttachmentViewModel")
+                ? attachment.getObject("commentImageAttachmentViewModel") : attachment;
+        return view.getObject("image");
     }
 
     @Override

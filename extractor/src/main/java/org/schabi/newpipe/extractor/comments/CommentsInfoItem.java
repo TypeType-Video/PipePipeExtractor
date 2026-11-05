@@ -14,6 +14,9 @@ import javax.annotation.Nullable;
 
 public class CommentsInfoItem extends InfoItem {
 
+    /** Whether the service identifies the comment's image attachment as animated. */
+    public enum PictureAnimation { UNKNOWN, ANIMATED }
+
     private String commentId;
     private Description commentText = Description.EMPTY_DESCRIPTION;
     private String uploaderName;
@@ -34,6 +37,29 @@ public class CommentsInfoItem extends InfoItem {
     private Page replies;
     @Nonnull
     private Collection<Image> pictures = Collections.emptyList();
+    @Nonnull
+    private String pictureFormatHint = "";
+    @Nonnull
+    private PictureAnimation pictureAnimation = PictureAnimation.UNKNOWN;
+
+    /** Service-provided format hint for the attachment, or an empty string if unavailable. */
+    @Nonnull
+    public String getPictureFormatHint() {
+        return pictureFormatHint;
+    }
+
+    public void setPictureFormatHint(@Nonnull final String hint) {
+        pictureFormatHint = hint;
+    }
+
+    @Nonnull
+    public PictureAnimation getPictureAnimation() {
+        return pictureAnimation;
+    }
+
+    public void setPictureAnimation(@Nonnull final PictureAnimation animation) {
+        pictureAnimation = animation;
+    }
 
     public static final int NO_LIKE_COUNT = -1;
     public static final int NO_STREAM_POSITION = -1;
