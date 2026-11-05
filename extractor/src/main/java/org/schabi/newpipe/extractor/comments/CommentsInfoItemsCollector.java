@@ -111,6 +111,16 @@ public final class CommentsInfoItemsCollector
         } catch (final Exception e) {
             addError(e);
         }
+        try {
+            resultItem.setPictureFormatHint(extractor.getPictureFormatHint());
+        } catch (final Exception e) {
+            addError(e);
+        }
+        try {
+            resultItem.setPictureAnimation(extractor.getPictureAnimation());
+        } catch (final Exception e) {
+            addError(e);
+        }
 
         return resultItem;
     }

@@ -150,6 +150,17 @@ public interface CommentsInfoItemExtractor extends InfoItemExtractor {
         return Collections.emptyList();
     }
 
+    /** Service-provided image format hint, or an empty string when unavailable. */
+    @Nonnull
+    default String getPictureFormatHint() throws ParsingException {
+        return "";
+    }
+
+    @Nonnull
+    default CommentsInfoItem.PictureAnimation getPictureAnimation() throws ParsingException {
+        return CommentsInfoItem.PictureAnimation.UNKNOWN;
+    }
+
     @Override
     default String getThumbnailUrl() throws ParsingException {
         return null;
