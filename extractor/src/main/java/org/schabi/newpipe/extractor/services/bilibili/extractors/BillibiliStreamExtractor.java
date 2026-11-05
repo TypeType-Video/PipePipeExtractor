@@ -9,6 +9,7 @@ import org.schabi.newpipe.extractor.*;
 import org.schabi.newpipe.extractor.channel.StaffInfoItem;
 import org.schabi.newpipe.extractor.downloader.CancellableCall;
 import org.schabi.newpipe.extractor.downloader.Downloader;
+import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.*;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
@@ -525,8 +526,9 @@ public class BillibiliStreamExtractor extends StreamExtractor {
             // generated cookies is safe even when the user is logged in (unlike the account
             // tokens, which used to trigger risk control here).
             final Map<String, List<String>> metadataHeaders = getHeaders(getOriginalUrl());
-            final String response = downloader.get(metadataUrl, metadataHeaders).responseBody();
-            watch = parseVideoMetadata(response);
+            final Response metadataResponse = downloader.get(metadataUrl, metadataHeaders);
+            BilibiliRiskControl.check(metadataResponse);
+            watch = parseVideoMetadata(metadataResponse.responseBody());
 
             if (watch == null) {
                 throw new ContentNotAvailableException(
@@ -617,7 +619,9 @@ public class BillibiliStreamExtractor extends StreamExtractor {
             finalUrl = baseUrl + "?" + createQueryString(params);
         }
 
-        String response = getDownloader().get(finalUrl, headers).responseBody();
+        final Response playResponse = getDownloader().get(finalUrl, headers);
+        BilibiliRiskControl.check(playResponse);
+        String response = playResponse.responseBody();
         try {
             playData = JsonParser.object().from(response);
             switch (playData.getInt("code")) {
@@ -633,6 +637,7 @@ public class BillibiliStreamExtractor extends StreamExtractor {
             }
             JsonObject dataParentObject = (isPremiumContent == 1 ? playData.getObject("result").getObject("video_info") : playData.getObject("data"));
             dataObject = dataParentObject.getObject("dash");
+            BilibiliRiskControl.checkPlayData(dataParentObject);
             if (dataObject.size() == 0) {
                 throw new PaidContentException("Paid content");
                 //dataArray = dataParentObject.getArray("durl");
