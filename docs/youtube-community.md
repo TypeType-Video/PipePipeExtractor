@@ -23,12 +23,17 @@ for (InfoItem item : page.getRelatedItems()) {
 ```
 
 `CommunityPostInfoItem.getImages()` groups image variants by attachment. Poll
-choices have their own optional images; shared videos have a URL, title and
-preview variants. For a repost, `getSharedPost()` contains the original post if
-YouTube returned it. A parsed date can be unavailable even when the textual
-date is present. Counts are the localized strings returned by YouTube, not
-necessarily exact numbers. Unknown or incomplete attachment variants should
-not be interpreted as proof that a post has no media.
+choices have their own optional images, while `getPollType()` distinguishes
+text, image, quiz and unknown variants and `getPollStatus()` retains YouTube's
+raw status. Shared videos have a URL, title and preview variants. For a repost,
+`getSharedPost()` contains the original post if YouTube returned it. A parsed
+date can be unavailable even when the textual date is present.
+
+Like, comment and poll-vote counts are exposed both as the localized strings
+returned by YouTube and as best-effort numeric values. A numeric value is
+`CommunityPostInfoItem.NO_COUNT` when it cannot be converted reliably; callers
+should retain the textual value for display. Unknown or incomplete attachment
+variants should not be interpreted as proof that a post has no media.
 
 Adding the extractor API does not add a community-post endpoint to TypeType by
 itself: TypeType Server still needs to map `ChannelTabs.POSTS` and
@@ -43,7 +48,9 @@ attachment as animated, otherwise `UNKNOWN`; `getPictureFormatHint()` retains
 the service's format hint when one is available. For example, YouTube may use an
 animated WebP URL for a GIF. A missing hint does not prove an image is static.
 Keep the full URL including its query string, which may be necessary to fetch
-the media.
+the media. `getPictureExternalId()`, `getPictureUnavailableText()` and
+`getPictureUnsupportedText()` retain the attachment state needed to explain a
+missing or unsupported image without guessing.
 
 ## Voice replies
 

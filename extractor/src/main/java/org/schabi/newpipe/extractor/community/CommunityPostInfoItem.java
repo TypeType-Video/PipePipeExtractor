@@ -21,6 +21,9 @@ import javax.annotation.Nullable;
  */
 public final class CommunityPostInfoItem extends InfoItem {
     public enum PostType { TEXT, IMAGE, POLL, VIDEO, SHARED_POST, UNKNOWN }
+    public enum PollType { TEXT, IMAGE, QUIZ, UNKNOWN }
+
+    public static final long NO_COUNT = -1;
 
     /** A poll option; image variants may be empty for text-only options. */
     public static final class PollChoice implements Serializable {
@@ -50,12 +53,17 @@ public final class CommunityPostInfoItem extends InfoItem {
     private final String textualUploadDate;
     private final String textualLikeCount;
     private final String textualCommentCount;
+    private final long likeCount;
+    private final long commentCount;
     @Nullable
     private final DateWrapper uploadDate;
     private final PostType postType;
     private final List<List<Image>> images;
     private final List<PollChoice> pollChoices;
+    private final PollType pollType;
+    private final String pollStatus;
     private final String textualPollVotes;
+    private final long pollVoteCount;
     private final String sharedUrl;
     private final String sharedTitle;
     private final List<Image> sharedPreviewImages;
@@ -67,10 +75,13 @@ public final class CommunityPostInfoItem extends InfoItem {
                                  final String authorName, final String authorId,
                                  final String authorUrl, final List<Image> authorAvatars,
                                  final String textualUploadDate, @Nullable final DateWrapper uploadDate,
-                                 final String textualLikeCount, final String textualCommentCount,
+                                 final String textualLikeCount, final long likeCount,
+                                 final String textualCommentCount, final long commentCount,
                                  final PostType postType,
                                  final List<List<Image>> images, final List<PollChoice> pollChoices,
-                                 final String textualPollVotes, final String sharedUrl,
+                                 final PollType pollType, final String pollStatus,
+                                 final String textualPollVotes, final long pollVoteCount,
+                                 final String sharedUrl,
                                  final String sharedTitle, final List<Image> sharedPreviewImages,
                                  @Nullable final CommunityPostInfoItem sharedPost) {
         super(InfoType.COMMUNITY_POST, serviceId, postUrl, plainText);
@@ -83,6 +94,8 @@ public final class CommunityPostInfoItem extends InfoItem {
         this.textualUploadDate = textualUploadDate;
         this.textualLikeCount = textualLikeCount;
         this.textualCommentCount = textualCommentCount;
+        this.likeCount = likeCount;
+        this.commentCount = commentCount;
         this.uploadDate = uploadDate;
         this.postType = postType;
         final List<List<Image>> copies = new ArrayList<>();
@@ -91,7 +104,10 @@ public final class CommunityPostInfoItem extends InfoItem {
         }
         this.images = Collections.unmodifiableList(copies);
         this.pollChoices = Collections.unmodifiableList(new ArrayList<>(pollChoices));
+        this.pollType = pollType;
+        this.pollStatus = pollStatus;
         this.textualPollVotes = textualPollVotes;
+        this.pollVoteCount = pollVoteCount;
         this.sharedUrl = sharedUrl;
         this.sharedTitle = sharedTitle;
         this.sharedPreviewImages = Collections.unmodifiableList(new ArrayList<>(sharedPreviewImages));
@@ -136,6 +152,16 @@ public final class CommunityPostInfoItem extends InfoItem {
         return textualCommentCount;
     }
 
+    /** Parsed count, or {@link #NO_COUNT} if the localized value could not be converted. */
+    public long getLikeCount() {
+        return likeCount;
+    }
+
+    /** Parsed count, or {@link #NO_COUNT} if the localized value could not be converted. */
+    public long getCommentCount() {
+        return commentCount;
+    }
+
     /** A parsed, possibly approximate date, or null if the service did not provide one. */
     @Nullable
     public DateWrapper getUploadDate() {
@@ -154,8 +180,22 @@ public final class CommunityPostInfoItem extends InfoItem {
         return pollChoices;
     }
 
+    public PollType getPollType() {
+        return pollType;
+    }
+
+    /** Raw status returned by YouTube, or an empty string when unavailable. */
+    public String getPollStatus() {
+        return pollStatus;
+    }
+
     public String getTextualPollVotes() {
         return textualPollVotes;
+    }
+
+    /** Parsed count, or {@link #NO_COUNT} if the localized value could not be converted. */
+    public long getPollVoteCount() {
+        return pollVoteCount;
     }
 
     public String getSharedUrl() {

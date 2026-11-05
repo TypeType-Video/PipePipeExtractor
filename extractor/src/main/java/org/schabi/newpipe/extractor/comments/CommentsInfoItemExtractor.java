@@ -161,6 +161,21 @@ public interface CommentsInfoItemExtractor extends InfoItemExtractor {
         return CommentsInfoItem.PictureAnimation.UNKNOWN;
     }
 
+    @Nonnull
+    default String getPictureExternalId() throws ParsingException {
+        return "";
+    }
+
+    @Nonnull
+    default String getPictureUnavailableText() throws ParsingException {
+        return "";
+    }
+
+    @Nonnull
+    default String getPictureUnsupportedText() throws ParsingException {
+        return "";
+    }
+
     /** A voice/audio attachment, or null when this is a regular comment. */
     @Nullable
     default CommentAudioAttachment getAudioAttachment() throws ParsingException {
