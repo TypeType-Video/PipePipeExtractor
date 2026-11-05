@@ -1,4 +1,4 @@
-# YouTube community posts and comment attachments
+# YouTube community posts and comment media
 
 This API is read-only. It exposes YouTube's channel posts and comment attachments;
 it does not create posts, vote in polls, or send comments.
@@ -45,7 +45,21 @@ animated WebP URL for a GIF. A missing hint does not prove an image is static.
 Keep the full URL including its query string, which may be necessary to fetch
 the media.
 
+## Voice replies
+
+YouTube voice replies are represented by `CommentAudioAttachment`. Access it
+through `CommentsInfoItem.getAudioAttachment()`; regular comments return null.
+The object keeps the stable YouTube media id and watch URL, duration in
+milliseconds, transcript, playability and any unavailable message. Resolve the
+watch URL through the normal stream extraction API to obtain a current audio
+stream. Do not persist the short-lived, IP-bound `googlevideo` playback URL.
+
+The WEB comments response exposes only an unavailable state and transcript.
+When such a response is present, the extractor performs one additional Android
+InnerTube request for that page and matches the playable metadata through the
+comment surface key. Pages without voice replies do not make this extra request.
+
 TypeType Server still needs to expose these attachment fields in its comment
 response. The consuming client also needs an image decoder and view that support
-animated WebP or the returned format. Extracting the URL alone does not guarantee
-animated display.
+animated WebP or the returned format, plus an audio player for voice replies.
+Extracting the media metadata alone does not render or play it.

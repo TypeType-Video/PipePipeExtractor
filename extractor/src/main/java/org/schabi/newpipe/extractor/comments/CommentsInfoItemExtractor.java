@@ -161,6 +161,12 @@ public interface CommentsInfoItemExtractor extends InfoItemExtractor {
         return CommentsInfoItem.PictureAnimation.UNKNOWN;
     }
 
+    /** A voice/audio attachment, or null when this is a regular comment. */
+    @Nullable
+    default CommentAudioAttachment getAudioAttachment() throws ParsingException {
+        return null;
+    }
+
     @Override
     default String getThumbnailUrl() throws ParsingException {
         return null;
