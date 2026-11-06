@@ -14,7 +14,6 @@ import org.schabi.newpipe.extractor.exceptions.*;
 import org.schabi.newpipe.extractor.services.niconico.NiconicoService;
 
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -22,11 +21,6 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 public class NiconicoWatchDataCache {
-    private static final String GUEST_WATCH_API = "https://www.nicovideo.jp/api/watch/v3_guest/";
-    private static final String TRACK_ID_LETTERS =
-            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final SecureRandom RANDOM = new SecureRandom();
-
     String lastId;
     Response response;
     Document page;
@@ -60,19 +54,6 @@ public class NiconicoWatchDataCache {
                                              @Nonnull final String id) throws ExtractionException {
         if (lastId != null && lastId.equals(id)) {
             return watchData;
-        }
-
-        if (!id.contains("live.nicovideo.jp") && !ServiceList.NicoNico.hasTokens()) {
-            final JsonObject guest = fetchGuestWatchData(downloader, id);
-            if (guest != null) {
-                response = null;
-                page = Jsoup.parse("");
-                watchData = guest;
-                watchDataType = WatchDataType.GUEST;
-                checkPlayable();
-                lastId = id;
-                return watchData;
-            }
         }
 
         String url = NiconicoService.WATCH_URL + id;
@@ -121,49 +102,6 @@ public class NiconicoWatchDataCache {
             throw new ParsingException("Failed to parse content");
         }
 
-        checkPlayable();
-        lastId = id;
-        return watchData;
-    }
-
-    // The guest watch API answers in about 0.35 s from Europe where the watch page takes about
-    // 0.6 s, with the watch data in the shape the page used before October 2026. Any surprise
-    // falls back to the page, which also explains why a video cannot be watched.
-    private static JsonObject fetchGuestWatchData(final Downloader downloader, final String id) {
-        try {
-            final HashMap<String, List<String>> headers = new HashMap<>();
-            headers.put("X-Frontend-Id", Collections.singletonList("6"));
-            headers.put("X-Frontend-Version", Collections.singletonList("0"));
-            final Response guest = downloader.get(GUEST_WATCH_API + id + "?actionTrackId="
-                    + actionTrackId(), headers, NiconicoService.LOCALE);
-            if (guest.responseCode() != 200) {
-                return null;
-            }
-            final JsonObject root = JsonParser.object().from(guest.responseBody());
-            if (root.getObject("meta").getInt("status") != 200) {
-                return null;
-            }
-            final JsonObject data = root.getObject("data");
-            final JsonObject domand = data.getObject("media").getObject("domand");
-            if (domand.getArray("videos").isEmpty() || domand.getString("accessRightKey") == null
-                    || data.getObject("client").getString("watchTrackId") == null) {
-                return null;
-            }
-            return data;
-        } catch (final Exception e) {
-            return null;
-        }
-    }
-
-    private static String actionTrackId() {
-        final StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < 10; i++) {
-            builder.append(TRACK_ID_LETTERS.charAt(RANDOM.nextInt(TRACK_ID_LETTERS.length())));
-        }
-        return builder.append('_').append(System.currentTimeMillis()).toString();
-    }
-
-    private void checkPlayable() throws ExtractionException {
         if (watchData.getString("errorCode") != null && watchData.getString("errorCode").equals("FORBIDDEN")) { //TODO: also for other types such as member limited vids
             switch (watchData.getString("reasonCode")) {
                 case "DOMESTIC_VIDEO":
@@ -185,6 +123,9 @@ public class NiconicoWatchDataCache {
                 throw new PaidContentException("This content is limited to channel members");
             }
         }
+
+        lastId = id;
+        return watchData;
     }
 
     public JsonObject getLastWatchData() {
