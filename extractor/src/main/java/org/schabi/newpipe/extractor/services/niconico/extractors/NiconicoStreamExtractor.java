@@ -572,10 +572,9 @@ public class NiconicoStreamExtractor extends StreamExtractor {
         if (!jsonLdId.isEmpty()) {
             return jsonLdId;
         }
-        if (isChannel()) {
-            return watch.getObject("channel").getString("id");
-        }
-        return watch.getObject("owner").getString("id");
+        // The guest watch API gives the owner id as a number.
+        final Object id = (isChannel() ? watch.getObject("channel") : watch.getObject("owner")).get("id");
+        return id == null ? "" : String.valueOf(id);
     }
 
     @Override
