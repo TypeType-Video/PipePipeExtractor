@@ -68,7 +68,10 @@ public class NiconicoCommentsInfoItemExtractor implements CommentsInfoItemExtrac
 
     @Override
     public String getCommentId() throws ParsingException {
-        return json.getString("no");
+        if (json.has("id")) {
+            return json.getString("id");
+        }
+        return json.has("no") ? String.valueOf(json.get("no")) : null;
     }
 
     @Override
@@ -118,28 +121,28 @@ public class NiconicoCommentsInfoItemExtractor implements CommentsInfoItemExtrac
     public DateWrapper getUploadDate() throws ParsingException {
         return new DateWrapper(
                 OffsetDateTime.ofInstant(
-                        Instant.ofEpochSecond(json.getInt("date")),
+                        json.has("postedAt")
+                                ? OffsetDateTime.parse(json.getString("postedAt")).toInstant()
+                                : Instant.ofEpochSecond(json.getLong("date")),
                         ZoneOffset.ofHours(0)
                 )
         );
     }
 
     // Additional apis.
-    private int getVpos() {
-        return json.getInt("vpos");
-    }
-
     @Nonnull
     private Duration getDuration() {
-        final long VPOS_MILLIS = 10;
-        return Duration.ofMillis(getVpos() * VPOS_MILLIS);
+        if (json.has("vpos")) {
+            return Duration.ofMillis(json.getLong("vpos") * 10);
+        }
+        return Duration.ofMillis(json.getLong("vposMs"));
     }
 
     private int getScore() {
-        return json.getInt("score");
+        return json.has("nicoruCount") ? json.getInt("nicoruCount") : json.getInt("score");
     }
 
     private String getCommentTextRaw() {
-        return json.getString("content");
+        return json.has("content") ? json.getString("content") : json.getString("body");
     }
 }
