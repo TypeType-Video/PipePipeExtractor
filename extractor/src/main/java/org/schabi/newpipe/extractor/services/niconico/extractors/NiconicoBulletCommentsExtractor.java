@@ -50,7 +50,7 @@ public class NiconicoBulletCommentsExtractor extends BulletCommentsExtractor {
     @Override
     public void onFetchPage(@Nonnull final Downloader downloader)
             throws IOException, ExtractionException {
-        if(watchDataCache.getThreadServer() == null){
+        if(!getId().contains("live.nicovideo.jp") || watchDataCache.getThreadServer() == null){
             isLive = false;
             this.watch = watchDataCache.refreshAndGetWatchData(downloader, getId());
             return;

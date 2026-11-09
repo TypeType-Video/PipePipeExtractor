@@ -26,10 +26,10 @@ public class NiconicoWatchDataCache {
     Document page;
     JsonObject watchData;
     WatchDataType watchDataType;
-    private String threadServer;
+    private volatile String threadServer;
     private String threadId;
-    private long startAt;
-    private String streamCookie="";
+    private volatile long startAt;
+    private volatile String streamCookie="";
 
     public enum WatchDataType {
         LOGIN(1),
@@ -45,16 +45,20 @@ public class NiconicoWatchDataCache {
             return value;
         }
     }
-    public void invalidate(){
+    public synchronized void invalidate(){
         lastId = null;
     }
 
     @Nonnull
-    public JsonObject refreshAndGetWatchData(final Downloader downloader,
-                                             @Nonnull final String id) throws ExtractionException {
+    public synchronized JsonObject refreshAndGetWatchData(final Downloader downloader,
+                                                          @Nonnull final String id) throws ExtractionException {
         if (lastId != null && lastId.equals(id)) {
             return watchData;
         }
+        final Response response;
+        final Document page;
+        final JsonObject watchData;
+        final WatchDataType watchDataType;
 
         String url = NiconicoService.WATCH_URL + id;
         if(id.contains("live.nicovideo.jp")){
@@ -124,23 +128,27 @@ public class NiconicoWatchDataCache {
             }
         }
 
+        this.response = response;
+        this.page = page;
+        this.watchData = watchData;
+        this.watchDataType = watchDataType;
         lastId = id;
         return watchData;
     }
 
-    public JsonObject getLastWatchData() {
+    public synchronized JsonObject getLastWatchData() {
         return watchData;
     }
 
-    public WatchDataType getLastWatchDataType() {
+    public synchronized WatchDataType getLastWatchDataType() {
         return watchDataType;
     }
 
-    public Document getLastPage() {
+    public synchronized Document getLastPage() {
         return page;
     }
 
-    public Response getLastResponse() {
+    public synchronized Response getLastResponse() {
         return response;
     }
 
@@ -160,7 +168,11 @@ public class NiconicoWatchDataCache {
         this.startAt = startAt;
     }
 
-    public String getStreamCookie() {
+    public synchronized String getStreamCookie() {
+        return streamCookieWith(streamCookie);
+    }
+
+    public String streamCookieWith(final String streamCookie) {
         if(ServiceList.NicoNico.hasTokens()){
             String cookie = ServiceList.NicoNico.getTokens();
             if(cookie.endsWith(";")){
@@ -172,7 +184,7 @@ public class NiconicoWatchDataCache {
         return streamCookie;
     }
 
-    public void setStreamCookie(String streamCookie) {
+    public synchronized void setStreamCookie(String streamCookie) {
         this.streamCookie = streamCookie;
     }
 }
