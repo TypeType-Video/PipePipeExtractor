@@ -52,6 +52,10 @@ import javax.annotation.Nullable;
 public abstract class StreamExtractor extends Extractor {
 
     public static final int NO_AGE_LIMIT = 0;
+    /** Creator-provided end-screen elements, empty when unavailable. */
+    public List<EndScreenElement> getEndScreenElements() throws ParsingException {
+        return Collections.emptyList();
+    }
     public static final long UNKNOWN_SUBSCRIBER_COUNT = -1;
 
     public StreamExtractor(final StreamingService service, final LinkHandler linkHandler) {

@@ -77,6 +77,61 @@ public class YoutubeStreamExtractor extends StreamExtractor {
 
     /*////////////////////////////////////////////////////////////////////////*/
     public JsonObject playerResponse;
+    private JsonObject endScreenData;
+
+    /** Metadata from the existing WEB player request, independent of playback client. */
+    public void setEndScreenData(final JsonObject data) {
+        endScreenData = data;
+    }
+
+    @Override
+    public List<EndScreenElement> getEndScreenElements() throws ParsingException {
+        final List<EndScreenElement> result = new ArrayList<>();
+        if (endScreenData == null && playerResponse == null) {
+            return result;
+        }
+        final JsonObject data = endScreenData != null
+                ? endScreenData : playerResponse.getObject("endscreen");
+        for (final Object item : data
+                .getObject("endscreenRenderer").getArray("elements")) {
+            if (!(item instanceof JsonObject)) {
+                continue;
+            }
+            final JsonObject element = ((JsonObject) item).getObject("endscreenElementRenderer");
+            if (element.isEmpty()) {
+                continue;
+            }
+            final JsonObject endpoint = element.getObject("endpoint");
+            String url = endpoint.getObject("commandMetadata").getObject("webCommandMetadata")
+                    .getString("url", "");
+            if (url.isEmpty()) {
+                url = endpoint.getObject("urlEndpoint").getString("url", "");
+            }
+            if (url.startsWith("/")) {
+                url = "https://www.youtube.com" + url;
+            }
+            if (endpoint.has("urlEndpoint")) {
+                final String destination = getUrlFromNavigationEndpoint(endpoint);
+                if (destination != null) {
+                    url = destination;
+                }
+            }
+            try {
+                result.add(new EndScreenElement(
+                        element.getString("id", ""), element.getString("style", "UNKNOWN"),
+                        getTextFromObject(element.getObject("title")), url,
+                        getImagesFromThumbnailsArray(element.getObject("image")
+                                .getArray("thumbnails")),
+                        Long.parseLong(element.getString("startMs", "-1")),
+                        Long.parseLong(element.getString("endMs", "-1")),
+                        element.getDouble("left", -1), element.getDouble("top", -1),
+                        element.getDouble("width", -1), element.getDouble("aspectRatio", -1)));
+            } catch (final NumberFormatException e) {
+                throw new ParsingException("Invalid end-screen timing", e);
+            }
+        }
+        return result;
+    }
     @Nullable
     private String playerResponseVisitorData;
     @Nullable
@@ -1890,6 +1945,7 @@ public class YoutubeStreamExtractor extends StreamExtractor {
             errors.clear();
         }
         playerResponseVisitorData = null;
+        endScreenData = null;
         playerResponseClientVersion = null;
         primaryPlayerError = null;
         androidReelFormats = null;
