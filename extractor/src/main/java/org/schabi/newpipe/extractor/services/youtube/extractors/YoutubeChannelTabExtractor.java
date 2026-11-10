@@ -558,7 +558,14 @@ public class YoutubeChannelTabExtractor extends ChannelTabExtractor {
             });
         } else if (item.has("playlistRenderer")) {
             collector.commit(new YoutubeMixOrPlaylistInfoItemExtractor(
-                    item.getObject("playlistRenderer")));
+                    item.getObject("playlistRenderer")) {
+                @Override
+                public String getUploaderName() throws ParsingException {
+                    // Courses carry no byline: they belong to the channel being browsed
+                    final String name = super.getUploaderName();
+                    return isNullOrEmpty(name) ? channelIds.get(0) : name;
+                }
+            });
         } else if (item.has("radioRenderer")) {
             collector.commit(new YoutubeMixOrPlaylistInfoItemExtractor(
                     item.getObject("radioRenderer")));
