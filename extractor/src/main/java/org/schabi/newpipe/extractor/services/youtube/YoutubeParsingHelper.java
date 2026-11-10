@@ -1955,11 +1955,18 @@ YoutubeParsingHelper {
                                 .value(VIDEO_ID, videoId)
                                 .value(CONTENT_CHECK_OK, true)
                                 .value(RACY_CHECK_OK, true)
+                                .object("playbackContext")
+                                    .object("contentPlaybackContext")
+                                        .value("signatureTimestamp",
+                                                YoutubeJavaScriptPlayerManager
+                                                        .getSignatureTimestamp(videoId))
+                                    .end()
+                                .end()
                                 .done())
                 .getBytes(StandardCharsets.UTF_8);
         logPerformance(videoId, "webPlayer.prepareBody", stageStartedAt);
         final String url = YOUTUBEI_V1_URL + "player" + "?" + DISABLE_PRETTY_PRINT_PARAMETER
-                + "&$fields=microformat,playabilityStatus,storyboards,videoDetails";
+                + "&$fields=microformat,playabilityStatus,storyboards,videoDetails,endscreen";
 
         stageStartedAt = System.nanoTime();
         final Map<String, List<String>> headers = new HashMap<>();
@@ -2000,6 +2007,7 @@ YoutubeParsingHelper {
 //                            // the web endpoint may return UNPLAYABLE due to blocking, but metadata is still usable.
 //                            streamExtractor.playerResponse = webPlayerResponse;
 //
+                            streamExtractor.setEndScreenData(webPlayerResponse.getObject("endscreen"));
                             // The microformat JSON object of the content is only returned on the WEB client,
                             // so we need to store it instead of getting it directly from the playerResponse
                             streamExtractor.playerMicroFormatRenderer = webPlayerResponse.getObject("microformat")
