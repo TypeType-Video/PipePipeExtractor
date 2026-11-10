@@ -77,7 +77,7 @@ public class YoutubeStreamExtractor extends StreamExtractor {
 
     /*////////////////////////////////////////////////////////////////////////*/
     public JsonObject playerResponse;
-    private JsonObject endScreenData;
+    private volatile JsonObject endScreenData;
 
     /** Metadata from the existing WEB player request, independent of playback client. */
     public void setEndScreenData(final JsonObject data) {
@@ -85,15 +85,20 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     }
 
     @Override
-    public List<EndScreenElement> getEndScreenElements() throws ParsingException {
-        final List<EndScreenElement> result = new ArrayList<>();
-        if (endScreenData == null && playerResponse == null) {
-            return result;
+    public List<EndScreenElement> getEndScreenElements() {
+        final JsonObject webData = endScreenData;
+        if (webData != null) {
+            return parseEndScreenElements(webData);
         }
-        final JsonObject data = endScreenData != null
-                ? endScreenData : playerResponse.getObject("endscreen");
-        for (final Object item : data
-                .getObject("endscreenRenderer").getArray("elements")) {
+        return playerResponse == null
+                ? Collections.emptyList()
+                : parseEndScreenElements(playerResponse.getObject("endscreen"));
+    }
+
+    /** Reads the {@code endscreen} object of a player response. Malformed elements are skipped. */
+    public static List<EndScreenElement> parseEndScreenElements(final JsonObject endScreen) {
+        final List<EndScreenElement> result = new ArrayList<>();
+        for (final Object item : endScreen.getObject("endscreenRenderer").getArray("elements")) {
             if (!(item instanceof JsonObject)) {
                 continue;
             }
@@ -101,36 +106,38 @@ public class YoutubeStreamExtractor extends StreamExtractor {
             if (element.isEmpty()) {
                 continue;
             }
-            final JsonObject endpoint = element.getObject("endpoint");
-            String url = endpoint.getObject("commandMetadata").getObject("webCommandMetadata")
-                    .getString("url", "");
-            if (url.isEmpty()) {
-                url = endpoint.getObject("urlEndpoint").getString("url", "");
-            }
-            if (url.startsWith("/")) {
-                url = "https://www.youtube.com" + url;
-            }
-            if (endpoint.has("urlEndpoint")) {
-                final String destination = getUrlFromNavigationEndpoint(endpoint);
-                if (destination != null) {
-                    url = destination;
-                }
-            }
             try {
                 result.add(new EndScreenElement(
                         element.getString("id", ""), element.getString("style", "UNKNOWN"),
-                        getTextFromObject(element.getObject("title")), url,
+                        getTextFromObject(element.getObject("title")),
+                        getEndScreenUrl(element.getObject("endpoint")),
                         getImagesFromThumbnailsArray(element.getObject("image")
                                 .getArray("thumbnails")),
                         Long.parseLong(element.getString("startMs", "-1")),
                         Long.parseLong(element.getString("endMs", "-1")),
                         element.getDouble("left", -1), element.getDouble("top", -1),
                         element.getDouble("width", -1), element.getDouble("aspectRatio", -1)));
-            } catch (final NumberFormatException e) {
-                throw new ParsingException("Invalid end-screen timing", e);
+            } catch (final NumberFormatException | ParsingException ignored) {
             }
         }
         return result;
+    }
+
+    private static String getEndScreenUrl(final JsonObject endpoint) throws ParsingException {
+        if (endpoint.has("urlEndpoint")) {
+            final String destination = getUrlFromNavigationEndpoint(endpoint);
+            if (destination != null) {
+                return destination;
+            }
+        }
+        String url = endpoint.getObject("commandMetadata").getObject("webCommandMetadata")
+                .getString("url", "");
+        if (url.isEmpty()) {
+            url = endpoint.getObject("urlEndpoint").getString("url", "");
+        }
+        // "pp" only tells YouTube which end screen was clicked
+        url = url.replaceAll("([?&])pp=[^&]*&?", "$1").replaceAll("[?&]$", "");
+        return url.startsWith("/") ? "https://www.youtube.com" + url : url;
     }
     @Nullable
     private String playerResponseVisitorData;
