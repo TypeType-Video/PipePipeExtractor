@@ -497,7 +497,7 @@ public class StreamInfo extends Info {
         logPerformance(streamInfo.getId(), "optional.metadata", stageStartedAt);
         try {
             streamInfo.endScreenElements = Collections.unmodifiableList(
-                    new java.util.ArrayList<>(extractor.getEndScreenElements()));
+                    new ArrayList<>(extractor.getEndScreenElements()));
         } catch (final Exception e) {
             streamInfo.addError(e);
         }

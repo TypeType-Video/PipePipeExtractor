@@ -1940,19 +1940,25 @@ YoutubeParsingHelper {
             @Nonnull final String videoId,
             final YoutubeStreamExtractor streamExtractor) throws IOException, ExtractionException {
         long stageStartedAt = System.nanoTime();
-        final byte[] body = JsonWriter.string(
-                        prepareDesktopJsonBuilder(localization, contentCountry)
-                                .value(VIDEO_ID, videoId)
-                                .value(CONTENT_CHECK_OK, true)
-                                .value(RACY_CHECK_OK, true)
-                                .object("playbackContext")
-                                    .object("contentPlaybackContext")
-                                        .value("signatureTimestamp",
-                                                YoutubeJavaScriptPlayerManager
-                                                        .getSignatureTimestamp(videoId))
-                                    .end()
-                                .end()
-                                .done())
+        final JsonBuilder<JsonObject> bodyBuilder =
+                prepareDesktopJsonBuilder(localization, contentCountry)
+                        .value(VIDEO_ID, videoId)
+                        .value(CONTENT_CHECK_OK, true)
+                        .value(RACY_CHECK_OK, true);
+        // YouTube only returns the end screen with a signature timestamp. This request also
+        // carries metadata every playback client needs, so it must not fail when the player
+        // metadata is unavailable: the end screen is then simply missing.
+        try {
+            final int signatureTimestamp =
+                    YoutubeJavaScriptPlayerManager.getSignatureTimestamp(videoId);
+            bodyBuilder.object("playbackContext")
+                    .object("contentPlaybackContext")
+                    .value("signatureTimestamp", signatureTimestamp)
+                    .end()
+                    .end();
+        } catch (final ParsingException ignored) {
+        }
+        final byte[] body = JsonWriter.string(bodyBuilder.done())
                 .getBytes(StandardCharsets.UTF_8);
         logPerformance(videoId, "webPlayer.prepareBody", stageStartedAt);
         final String url = YOUTUBEI_V1_URL + "player" + "?" + DISABLE_PRETTY_PRINT_PARAMETER
