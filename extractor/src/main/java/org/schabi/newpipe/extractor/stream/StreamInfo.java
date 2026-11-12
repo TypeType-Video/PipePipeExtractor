@@ -495,6 +495,12 @@ public class StreamInfo extends Info {
             streamInfo.addError(e);
         }
         logPerformance(streamInfo.getId(), "optional.metadata", stageStartedAt);
+        try {
+            streamInfo.endScreenElements = Collections.unmodifiableList(
+                    new ArrayList<>(extractor.getEndScreenElements()));
+        } catch (final Exception e) {
+            streamInfo.addError(e);
+        }
 
         stageStartedAt = System.nanoTime();
         try {
@@ -526,6 +532,11 @@ public class StreamInfo extends Info {
     }
 
     private StreamType streamType;
+    private List<EndScreenElement> endScreenElements = Collections.emptyList();
+
+    public List<EndScreenElement> getEndScreenElements() {
+        return endScreenElements;
+    }
     private String thumbnailUrl = "";
     @Nonnull
     private List<Image> thumbnails = Collections.emptyList();
