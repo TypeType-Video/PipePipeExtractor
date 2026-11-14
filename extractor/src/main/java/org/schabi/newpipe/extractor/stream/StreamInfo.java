@@ -736,8 +736,16 @@ public class StreamInfo extends Info {
         return uploaderName;
     }
 
+    /**
+     * Sets the name of the uploader.
+     *
+     * <p>The uploader name is never {@code null}: a stream whose uploader is unknown has an
+     * empty uploader name.</p>
+     *
+     * @param uploaderName the uploader name, {@code null} is stored as an empty string
+     */
     public void setUploaderName(final String uploaderName) {
-        this.uploaderName = uploaderName;
+        this.uploaderName = uploaderName == null ? "" : uploaderName;
     }
 
     public String getUploaderUrl() {

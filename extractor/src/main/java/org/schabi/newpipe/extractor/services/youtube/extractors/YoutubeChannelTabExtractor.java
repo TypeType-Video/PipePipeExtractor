@@ -490,7 +490,7 @@ public class YoutubeChannelTabExtractor extends ChannelTabExtractor {
                 new YoutubeStreamInfoItemExtractor(videoRenderer, getTimeAgoParser()) {
                     @Override
                     public String getUploaderName() {
-                        return channelIds.get(0);
+                        return channelNameOf(channelIds);
                     }
 
                     @Override
@@ -533,7 +533,7 @@ public class YoutubeChannelTabExtractor extends ChannelTabExtractor {
                 ) {
                     @Override
                     public String getUploaderName() {
-                        return channelIds.get(0);
+                        return channelNameOf(channelIds);
                     }
 
                     @Nullable
@@ -553,7 +553,7 @@ public class YoutubeChannelTabExtractor extends ChannelTabExtractor {
                     item.getObject("gridPlaylistRenderer")) {
                 @Override
                 public String getUploaderName() {
-                    return channelIds.get(0);
+                    return channelNameOf(channelIds);
                 }
             });
         } else if (item.has("playlistRenderer")) {
@@ -639,7 +639,7 @@ public class YoutubeChannelTabExtractor extends ChannelTabExtractor {
                     getTimeAgoParser()) {
                 @Override
                 public String getUploaderName() {
-                    return channelIds.get(0);
+                    return channelNameOf(channelIds);
                 }
 
                 @Override
@@ -674,6 +674,17 @@ public class YoutubeChannelTabExtractor extends ChannelTabExtractor {
         }
 
         return normalized;
+    }
+
+    /**
+     * The name of the channel whose tab is being parsed, which is the uploader of every item of
+     * that tab. The channel name is the first entry of {@code channelIds}.
+     *
+     * @return the channel name, or an empty string if it is not known
+     */
+    @Nonnull
+    private static String channelNameOf(@Nonnull final List<String> channelIds) {
+        return channelIds.isEmpty() ? "" : channelIds.get(0);
     }
 
     @Nullable
