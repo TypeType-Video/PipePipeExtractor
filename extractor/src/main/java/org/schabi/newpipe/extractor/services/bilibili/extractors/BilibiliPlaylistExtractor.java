@@ -149,8 +149,27 @@ public class BilibiliPlaylistExtractor extends PlaylistExtractor {
         return getPage(new Page(firstPageApiUrl, getDefaultCookies()));
     }
 
+    private void ensureTargetParsed() {
+        if (type != null) return;
+        BilibiliPlaylistLinkHandlerFactory.PlaylistTarget target = null;
+        try {
+            target = BilibiliPlaylistLinkHandlerFactory.parseTarget(getLinkHandler().getUrl());
+        } catch (ParsingException e) {
+            try {
+                target = BilibiliPlaylistLinkHandlerFactory.parseTarget(getOriginalUrl());
+            } catch (ParsingException ignored) {}
+        }
+        if (target != null) {
+            type = target.type;
+            if (currentMid == null || currentMid.isEmpty()) {
+                currentMid = target.mid;
+            }
+        }
+    }
+
     @Override
     public InfoItemsPage<StreamInfoItem> getPage(Page page) throws IOException, ExtractionException {
+        ensureTargetParsed();
         JsonObject pageData = this.data;
         if (!"partition".equals(type) && !page.getUrl().equals(firstPageApiUrl)) {
             try {
@@ -164,6 +183,18 @@ public class BilibiliPlaylistExtractor extends PlaylistExtractor {
         }
         if (pageData == null) {
             return new InfoItemsPage<>(new StreamInfoItemsCollector(getServiceId()), null);
+        }
+        if (currentMid == null || currentMid.isEmpty()) {
+            if (pageData.has("meta") && pageData.getObject("meta") != null) {
+                long m = pageData.getObject("meta").getLong("mid");
+                if (m > 0) currentMid = String.valueOf(m);
+            }
+            if (currentMid == null || currentMid.isEmpty()) {
+                String pageMid = utils.getMidFromRecordApiUrl(page.getUrl());
+                if (pageMid != null && !pageMid.isEmpty()) {
+                    currentMid = pageMid;
+                }
+            }
         }
         JsonArray results = pageData.getArray("archives");
         if (results == null || results.isEmpty()) {
@@ -191,13 +222,7 @@ public class BilibiliPlaylistExtractor extends PlaylistExtractor {
             pageParam = "pn";
         }
 
-        long total = 0;
-        if (pageData.has("page") && pageData.getObject("page") != null) {
-            total = pageData.getObject("page").getLong("total");
-        }
-        if (total <= 0 && pageData.has("meta") && pageData.getObject("meta") != null) {
-            total = pageData.getObject("meta").getLong("total");
-        }
+        long total = extractTotalFromData(pageData);
         if (total <= 0) {
             total = getStreamCount();
         }
@@ -309,12 +334,17 @@ public class BilibiliPlaylistExtractor extends PlaylistExtractor {
             }
             return 0;
         }
-        if (data != null && data.has("page") && data.getObject("page") != null) {
-            long total = data.getObject("page").getLong("total");
+        return extractTotalFromData(data);
+    }
+
+    private long extractTotalFromData(JsonObject source) {
+        if (source == null) return 0;
+        if (source.has("page") && source.getObject("page") != null) {
+            long total = source.getObject("page").getLong("total");
             if (total > 0) return total;
         }
-        if (data != null && data.has("meta") && data.getObject("meta") != null) {
-            return data.getObject("meta").getLong("total");
+        if (source.has("meta") && source.getObject("meta") != null) {
+            return source.getObject("meta").getLong("total");
         }
         return 0;
     }
