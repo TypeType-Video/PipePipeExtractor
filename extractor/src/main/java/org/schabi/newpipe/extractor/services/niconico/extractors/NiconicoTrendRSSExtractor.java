@@ -29,11 +29,21 @@ public class NiconicoTrendRSSExtractor implements StreamInfoItemExtractor {
                                      final @Nullable String upldUrl,
                                      final @Nullable String upldAvaterUrl) {
         item = e;
-        cdata = Jsoup.parse(e.select("description").text());
+        cdata = Jsoup.parse(descriptionHtml(e));
 
         uploaderName = upldName;
         uploaderUrl = upldUrl;
         uploaderAvaterUrl = upldAvaterUrl;
+    }
+
+    // Trending feeds escape the description markup, so it arrives as text. Channel feeds wrap it in CDATA, which
+    // the HTML parser turns into a comment up to the first '>' and real elements after it.
+    private static String descriptionHtml(final Element item) {
+        final Element description = item.selectFirst("description");
+        if (description == null) {
+            return "";
+        }
+        return description.children().isEmpty() ? description.text() : description.html();
     }
 
     @Override
@@ -77,7 +87,11 @@ public class NiconicoTrendRSSExtractor implements StreamInfoItemExtractor {
 
     @Override
     public long getDuration() throws ParsingException {
-        return utils.getDurationFromString(cdata.getElementsByClass("nico-info-length").text());
+        final String length = cdata.getElementsByClass("nico-info-length").text();
+        if (length.isEmpty()) {
+            return -1;
+        }
+        return utils.getDurationFromString(length);
     }
 
     @Override

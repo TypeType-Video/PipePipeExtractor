@@ -66,6 +66,10 @@ public class NiconicoUserExtractor extends ChannelExtractor {
                     getLinkHandler().getUrl()).responseBody());
             channel_info = user.select("meta[name=description]").attr("content");
             uploaderName = user.select("meta[property=og:site_name]").attr("content");
+            // Channel pages no longer carry Open Graph tags; their title is the channel name.
+            if (uploaderName.isEmpty()) {
+                uploaderName = user.title().trim();
+            }
             uploaderAvatarUrl = user.select("meta[property=og:image]").attr("content");
             uploaderUrl = getLinkHandler().getUrl();
             try {
