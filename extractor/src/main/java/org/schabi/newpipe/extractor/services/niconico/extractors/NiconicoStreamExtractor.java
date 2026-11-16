@@ -266,6 +266,12 @@ public class NiconicoStreamExtractor extends StreamExtractor {
             liveUrl = nicoWebSocketClient.getUrl();
             liveMessageServer = nicoWebSocketClient.getServerUrl();
             if (liveUrl != null && liveMessageServer != null) {
+                // The AES key of a live playlist needs the dlive_bid cookie handed out by the watch session. Like
+                // the domand_bid cookie of videos, it travels in the URL fragment for the player to send back.
+                final String streamCookie = nicoWebSocketClient.getStreamCookie();
+                if (streamCookie != null && !streamCookie.isEmpty()) {
+                    liveUrl += "#cookie=" + streamCookie;
+                }
                 webSocketClient.close();
                 return;
             }
