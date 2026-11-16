@@ -431,7 +431,8 @@ public class BillibiliStreamExtractor extends StreamExtractor {
                 watch = roomData;
                 watchDataCache.setRoomId(watch.getLong("room_id"));
                 final String liveTime = watch.getString("live_time");
-                if (liveTime != null) {
+                // An offline room reports "0000-00-00 00:00:00", which is no date at all.
+                if (liveTime != null && !liveTime.startsWith("0000")) {
                     watchDataCache.setStartTime(LocalDateTime.parse(liveTime,
                             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                             .toEpochSecond(ZoneOffset.ofHours(8)));
