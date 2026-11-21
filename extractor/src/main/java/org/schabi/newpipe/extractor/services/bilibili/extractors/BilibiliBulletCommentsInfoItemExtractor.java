@@ -9,19 +9,29 @@ import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import java.time.Duration;
 
 public class BilibiliBulletCommentsInfoItemExtractor implements BulletCommentsInfoItemExtractor {
+    private static final int DEFAULT_ARGB_COLOR = 0xFFFFFFFF;
+
     private final Element element;
     private final String[] attr;
 
-    public BilibiliBulletCommentsInfoItemExtractor(Element element) {
+    public BilibiliBulletCommentsInfoItemExtractor(final Element element) {
+        this(element, element.attr("p").split(","));
+    }
+
+    BilibiliBulletCommentsInfoItemExtractor(final Element element, final String[] attr) {
         this.element = element;
-        attr = element.attr("p").split(",");
+        this.attr = attr;
     }
 
     @Override
     public String getCommentText() throws ParsingException {
-        String text = element.text();
-        try{
-            String possibleText = JsonParser.array().from(text).getString(4);
+        final String text = element.text();
+        final String mode = attr.length > 1 ? attr[1].trim() : "";
+        if (!"7".equals(mode)) {
+            return text;
+        }
+        try {
+            final String possibleText = JsonParser.array().from(text).getString(4);
             return possibleText == null || possibleText.isEmpty() ? text : possibleText;
         } catch (Exception e) {
             return text;
@@ -30,14 +40,23 @@ public class BilibiliBulletCommentsInfoItemExtractor implements BulletCommentsIn
 
     @Override
     public int getArgbColor() throws ParsingException {
-        return Integer.parseInt(attr[3]) + 0xFF000000;
+        if (attr.length <= 3) {
+            return DEFAULT_ARGB_COLOR;
+        }
+        try {
+            final int rgb = Integer.parseInt(attr[3].trim());
+            return 0xFF000000 | (rgb & 0x00FFFFFF);
+        } catch (NumberFormatException e) {
+            return DEFAULT_ARGB_COLOR;
+        }
     }
 
     @Override
     public BulletCommentsInfoItem.Position getPosition() throws ParsingException {
-        if(attr[1].equals("4")){
+        final String mode = attr.length > 1 ? attr[1].trim() : "";
+        if ("4".equals(mode)) {
             return BulletCommentsInfoItem.Position.BOTTOM;
-        } else if (attr[1].equals("5")) {
+        } else if ("5".equals(mode)) {
             return BulletCommentsInfoItem.Position.TOP;
         }
         return BulletCommentsInfoItem.Position.REGULAR;
@@ -45,19 +64,31 @@ public class BilibiliBulletCommentsInfoItemExtractor implements BulletCommentsIn
 
     @Override
     public double getRelativeFontSize() throws ParsingException {
-        switch (attr[2]){
+        final String size = attr.length > 2 ? attr[2].trim() : "";
+        switch (size) {
             case "18":
                 return 0.5;
+            case "36":
+                return 0.7;
             case "25":
             default:
                 return 0.6;
-            case "36":
-                return 0.7;
         }
     }
 
     @Override
     public Duration getDuration() throws ParsingException {
-        return Duration.ofMillis((long) (Double.parseDouble(attr[0])*1000) + 2500); //2500 for sync
+        if (attr.length == 0) {
+            throw new ParsingException("Missing bullet comment timestamp");
+        }
+        try {
+            final double seconds = Double.parseDouble(attr[0].trim());
+            if (!Double.isFinite(seconds) || seconds < 0) {
+                throw new ParsingException("Invalid bullet comment timestamp: " + attr[0]);
+            }
+            return Duration.ofMillis(Math.round(seconds * 1000.0) + 2500L); // 2500 for sync
+        } catch (NumberFormatException e) {
+            throw new ParsingException("Invalid bullet comment timestamp: " + attr[0], e);
+        }
     }
 }
