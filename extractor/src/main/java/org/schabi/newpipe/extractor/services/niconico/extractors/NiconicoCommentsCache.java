@@ -18,16 +18,15 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import static org.schabi.newpipe.extractor.utils.Utils.UTF_8;
 
 public class NiconicoCommentsCache {
-    String id;
-    JsonObject[] comments;
+    private String id;
+    private JsonObject[] comments;
 
-    public JsonObject[] getComments(@NonNull final JsonObject watch,
-                                    final Downloader downloader,
-                                    final String lastId) throws ExtractionException {
-        if (Objects.equals(this.id, lastId)) {
+    public synchronized JsonObject[] getComments(@NonNull final JsonObject watch,
+                                                 final Downloader downloader,
+                                                 final String lastId) throws ExtractionException {
+        if (comments != null && Objects.equals(this.id, lastId)) {
             return comments;
         }
-        this.id = lastId;
         JsonObject nvComment = watch.getObject("comment").getObject("nvComment");
         String url = "https://public.nvcomment.nicovideo.jp/v1/threads";
 
@@ -56,8 +55,10 @@ public class NiconicoCommentsCache {
                 }
             }
             Collections.reverse(commentsList);
-            comments = commentsList.toArray(new JsonObject[0]);
-            return comments;
+            final JsonObject[] fetched = commentsList.toArray(new JsonObject[0]);
+            comments = fetched;
+            id = lastId;
+            return fetched;
         } catch (final JsonParserException e) {
             throw new ParsingException("Could not parse comment json data. Response: "
                     + commentResponse, e);

@@ -502,6 +502,12 @@ public class StreamInfo extends Info {
             streamInfo.addError(e);
         }
         logPerformance(streamInfo.getId(), "optional.metadata", stageStartedAt);
+        try {
+            streamInfo.endScreenElements = Collections.unmodifiableList(
+                    new ArrayList<>(extractor.getEndScreenElements()));
+        } catch (final Exception e) {
+            streamInfo.addError(e);
+        }
 
         stageStartedAt = System.nanoTime();
         try {
@@ -533,6 +539,11 @@ public class StreamInfo extends Info {
     }
 
     private StreamType streamType;
+    private List<EndScreenElement> endScreenElements = Collections.emptyList();
+
+    public List<EndScreenElement> getEndScreenElements() {
+        return endScreenElements;
+    }
     private String thumbnailUrl = "";
     @Nonnull
     private List<Image> thumbnails = Collections.emptyList();
@@ -725,8 +736,16 @@ public class StreamInfo extends Info {
         return uploaderName;
     }
 
+    /**
+     * Sets the name of the uploader.
+     *
+     * <p>The uploader name is never {@code null}: a stream whose uploader is unknown has an
+     * empty uploader name.</p>
+     *
+     * @param uploaderName the uploader name, {@code null} is stored as an empty string
+     */
     public void setUploaderName(final String uploaderName) {
-        this.uploaderName = uploaderName;
+        this.uploaderName = uploaderName == null ? "" : uploaderName;
     }
 
     public String getUploaderUrl() {

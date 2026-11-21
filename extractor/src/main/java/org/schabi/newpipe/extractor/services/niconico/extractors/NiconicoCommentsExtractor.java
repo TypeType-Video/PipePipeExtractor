@@ -9,6 +9,7 @@ import org.schabi.newpipe.extractor.comments.CommentsInfoItem;
 import org.schabi.newpipe.extractor.comments.CommentsInfoItemsCollector;
 import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
+import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
 
 import java.io.IOException;
@@ -34,7 +35,20 @@ public class NiconicoCommentsExtractor extends CommentsExtractor {
     @Override
     public void onFetchPage(final @Nonnull Downloader downloader)
             throws IOException, ExtractionException {
+        if (isLive()) {
+            return;
+        }
         watch = watchDataCache.refreshAndGetWatchData(downloader, getId());
+    }
+
+    @Override
+    public boolean isCommentsDisabled() throws ExtractionException {
+        return isLive();
+    }
+
+    // A live has no comment section: its viewers talk through the bullet comments of the watch session.
+    private boolean isLive() throws ParsingException {
+        return getId().contains("live.nicovideo.jp");
     }
 
     @Nonnull
@@ -42,6 +56,9 @@ public class NiconicoCommentsExtractor extends CommentsExtractor {
     public InfoItemsPage<CommentsInfoItem> getInitialPage()
             throws IOException, ExtractionException {
         final CommentsInfoItemsCollector collector = new CommentsInfoItemsCollector(getServiceId());
+        if (isLive()) {
+            return new InfoItemsPage<>(collector, null);
+        }
         for (final JsonObject comment : commentsCache.getComments(watch,
                 getDownloader(), getId())) {
             collector.commit(new NiconicoCommentsInfoItemExtractor(comment, getUrl()));

@@ -18,22 +18,10 @@ public final class SabrReloadPlayerResponse {
         for (final SabrProto.Field field : SabrProto.readFields(data)) {
             if (field.getNumber() == 1
                     && field.getWireType() == SabrProto.WIRE_LENGTH_DELIMITED) {
-                token = decodeReloadPlaybackContext(field.getBytes());
+                token = decodeReloadPlaybackParams(field.getBytes());
             }
         }
         return new SabrReloadPlayerResponse(token);
-    }
-
-    @Nullable
-    private static String decodeReloadPlaybackContext(@Nonnull final byte[] data)
-            throws SabrProtocolException {
-        for (final SabrProto.Field field : SabrProto.readFields(data)) {
-            if (field.getNumber() == 1
-                    && field.getWireType() == SabrProto.WIRE_LENGTH_DELIMITED) {
-                return decodeReloadPlaybackParams(field.getBytes());
-            }
-        }
-        return null;
     }
 
     @Nullable
