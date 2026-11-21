@@ -1,63 +1,99 @@
 package org.schabi.newpipe.extractor.services.bilibili;
 
-import com.grack.nanojson.JsonObject;
-import org.schabi.newpipe.extractor.downloader.Downloader;
-import org.schabi.newpipe.extractor.exceptions.ExtractionException;
-
-import javax.annotation.Nonnull;
-import java.util.HashMap;
+import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class WatchDataCache {
-    private long cid;
-    private long roomId;
-    private long startTime;
-    private String bvid;
+    private volatile long cid;
+    private volatile long roomId;
+    private volatile long startTime;
+    private volatile String bvid;
 
     // Fuck you auto-enqueueing
-    private long lastCid;
-    private String currentUrl;
-    private String lastUrl;
-    private final Map<String, Long> cidMap = new HashMap<>();
-    private final Map<String, String> bvidMap = new HashMap<>();
+    private volatile long lastCid;
+    private volatile String currentUrl;
+    private volatile String lastUrl;
+    private final Map<String, Long> cidMap = new ConcurrentHashMap<>();
+    private final Map<String, String> bvidMap = new ConcurrentHashMap<>();
+    private final Map<String, Long> roomIdMap = new ConcurrentHashMap<>();
+    private final Map<String, Long> startTimeMap = new ConcurrentHashMap<>();
 
-    public long getCid(String id) {
-        return cidMap.get(id);
+    @Nullable
+    public Long findCid(@Nullable final String id) {
+        return id == null ? null : cidMap.get(id);
     }
 
-    public void setCid(String id, long cid) {
+    public long getCid(final String id) {
+        final Long value = findCid(id);
+        if (value == null) {
+            throw new IllegalStateException("No cached cid for Bilibili stream id: " + id);
+        }
+        return value;
+    }
+
+    public void setCid(final String id, final long cid) {
         this.cid = cid;
-        cidMap.put(id, cid);
+        if (id != null) {
+            cidMap.put(id, cid);
+        }
     }
 
     public long getRoomId() {
         return roomId;
     }
 
-    public void setRoomId(long roomId) {
+    public void setRoomId(final long roomId) {
         this.roomId = roomId;
+    }
+
+    @Nullable
+    public Long findRoomId(@Nullable final String id) {
+        return id == null ? null : roomIdMap.get(id);
+    }
+
+    public void setRoomId(final String id, final long roomId) {
+        this.roomId = roomId;
+        if (id != null) {
+            roomIdMap.put(id, roomId);
+        }
     }
 
     public long getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(long startTime) {
+    public void setStartTime(final long startTime) {
         this.startTime = startTime;
     }
 
-    public void setBvid(String id, String bvid) {
+    @Nullable
+    public Long findStartTime(@Nullable final String id) {
+        return id == null ? null : startTimeMap.get(id);
+    }
+
+    public void setStartTime(final String id, final long startTime) {
+        this.startTime = startTime;
+        if (id != null) {
+            startTimeMap.put(id, startTime);
+        }
+    }
+
+    public void setBvid(final String id, final String bvid) {
         this.bvid = bvid;
-        bvidMap.put(id, bvid);
+        if (id != null && bvid != null) {
+            bvidMap.put(id, bvid);
+        }
     }
 
-    public String getBvid(String id) {
-        return bvidMap.get(id);
+    @Nullable
+    public String getBvid(final String id) {
+        return id == null ? null : bvidMap.get(id);
     }
 
-    public void init(String url){
-        if(url.equals(currentUrl)){
-            return ;
+    public synchronized void init(final String url) {
+        if (url != null && url.equals(currentUrl)) {
+            return;
         }
         lastCid = cid;
         lastUrl = currentUrl;

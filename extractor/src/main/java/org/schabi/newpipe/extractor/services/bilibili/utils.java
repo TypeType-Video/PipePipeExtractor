@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
 import okio.ByteString;
@@ -167,22 +168,38 @@ public class utils {
         return String.format("%02d:%02d:%02d,%03d", h, m, s, f);
     }
 
-    public static byte[] decompress(byte[] data) throws IOException {
-        byte[] decompressData = null;
-        Inflater decompressor = new Inflater(true);
-        decompressor.reset();
-        decompressor.setInput(data);
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length)) {
-            byte[] buf = new byte[1024];
-            while (!decompressor.finished()) {
-                int i = decompressor.inflate(buf);
-                outputStream.write(buf, 0, i);
-            }
-            decompressData = outputStream.toByteArray();
-        } catch (Exception ignored) {
+    public static byte[] decompress(final byte[] data) throws IOException {
+        return inflateBytes(data, true);
+    }
+
+    public static byte[] decompressZlibStrict(final byte[] data) throws IOException {
+        return inflateBytes(data, false);
+    }
+
+    private static byte[] inflateBytes(final byte[] data, final boolean nowrap) throws IOException {
+        if (data == null || data.length == 0) {
+            return new byte[0];
         }
-        decompressor.end();
-        return decompressData;
+        final Inflater decompressor = new Inflater(nowrap);
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length)) {
+            decompressor.setInput(data);
+            final byte[] buf = new byte[4096];
+            while (!decompressor.finished()) {
+                final int count = decompressor.inflate(buf);
+                if (count == 0) {
+                    if (decompressor.needsInput() || decompressor.needsDictionary()) {
+                        throw new IOException("Truncated or incomplete deflate stream");
+                    }
+                } else {
+                    outputStream.write(buf, 0, count);
+                }
+            }
+            return outputStream.toByteArray();
+        } catch (DataFormatException e) {
+            throw new IOException("Failed to decompress " + (nowrap ? "raw deflate" : "zlib") + " data", e);
+        } finally {
+            decompressor.end();
+        }
     }
 
     public static byte[] decompressZlib(byte[] data) {
