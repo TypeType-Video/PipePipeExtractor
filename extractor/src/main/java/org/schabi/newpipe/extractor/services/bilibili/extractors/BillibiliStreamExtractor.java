@@ -388,18 +388,6 @@ public class BillibiliStreamExtractor extends StreamExtractor {
         return StreamType.VIDEO_STREAM;
     }
 
-    private JsonObject parseVideoMetadata(final String response) {
-        try {
-            final JsonObject responseJson = JsonParser.object().from(response);
-            if (responseJson.getInt("code") != 0) {
-                return null;
-            }
-            return responseJson.getObject("data");
-        } catch (JsonParserException e) {
-            return null;
-        }
-    }
-
     @Override
     public void onFetchPage(@Nonnull Downloader downloader) throws IOException, ExtractionException {
         watchDataCache.init(getUrl());
@@ -429,10 +417,10 @@ public class BillibiliStreamExtractor extends StreamExtractor {
                             + responseJson.getString("message"));
                 }
                 watch = roomData;
-                watchDataCache.setRoomId(watch.getLong("room_id"));
+                watchDataCache.setRoomId(getId(), watch.getLong("room_id"));
                 final String liveTime = watch.getString("live_time");
                 if (liveTime != null) {
-                    watchDataCache.setStartTime(LocalDateTime.parse(liveTime,
+                    watchDataCache.setStartTime(getId(), LocalDateTime.parse(liveTime,
                             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                             .toEpochSecond(ZoneOffset.ofHours(8)));
                 }
@@ -476,68 +464,36 @@ public class BillibiliStreamExtractor extends StreamExtractor {
         // step 1: fetch metadata
         if (getUrl().contains("bangumi/play/")) {
             isPremiumContent = 1;
-            int type = getId().startsWith("ss") ? 0 : 1;
-            String response;
-            try {
-                response = downloader.get("https://api.bilibili.com/pgc/view/web/season?"
-                        + (type == 0 ? "season_id=" : "ep_id=") + getId().substring(2), getHeaders(getOriginalUrl())).responseBody();
-            } catch (Exception e) {
-                throw new ContentNotAvailableException("Unknown reason");
-            }
-
-            try {
-                premiumData = JsonParser.object().from(response).getObject("result");
-                relatedPaidItems = premiumData
-                        .getArray("episodes");
-                if (type == 0) {
-                    watch = relatedPaidItems.getObject(0);
-                } else {
-                    for (int i = 0; i < relatedPaidItems.size(); i++) {
-                        JsonObject temp = relatedPaidItems.getObject(i);
-                        if (temp.getString("share_url").endsWith(getId())) {
-                            watch = temp;
-                            break;
-                        }
-                    }
-                    if (watch == null) {
-                        throw new ExtractionException("Not found id in series data");
-                    }
-                }
-                bvid = watch.getString("bvid");
-                cid = watch.getLong("cid");
-                watchDataCache.setCid(getId(), cid);
-                watchDataCache.setBvid(getId(), bvid);
-                duration = watch.getInt("duration") / 1000;
-                isPaid = watch.getObject("rights").getInt("pay");
-            } catch (JsonParserException e) {
-                e.printStackTrace();
-            }
+            final BilibiliStreamMetadataHelper.BangumiMetadata metadata =
+                    BilibiliStreamMetadataHelper.fetchBangumiMetadata(
+                            downloader, getId(), getOriginalUrl());
+            premiumData = metadata.seasonResult;
+            relatedPaidItems = metadata.episodes;
+            watch = metadata.episode;
+            bvid = metadata.bvid;
+            cid = metadata.cid;
+            BilibiliStreamMetadataHelper.cacheIds(watchDataCache, getId(), bvid, cid);
+            duration = watch.getInt("duration") / 1000;
+            isPaid = watch.getObject("rights").getInt("pay");
         } else {
             bvid = utils.getPureBV(getId());
             final String videoshotUrl = VIDEOSHOT_API_URL + bvid;
             final Map<String, List<String>> videoshotHeaders = getHeaders(getOriginalUrl());
             videoshotRequest = BackgroundRequests.start(
                     () -> downloader.get(videoshotUrl, videoshotHeaders).responseBody());
-            final String metadataUrl =
-                    "https://api.bilibili.com/x/web-interface/wbi/view?bvid=" + bvid;
             // Visitor cookies (buvid3/buvid4/...) are mandatory here: Bilibili's WAF answers
             // HTTP 412 with an HTML risk-control page when a browser User-Agent requests this
             // endpoint without a buvid3 cookie from a non-mainland IP. Sending the anonymous
             // generated cookies is safe even when the user is logged in (unlike the account
             // tokens, which used to trigger risk control here).
-            final Map<String, List<String>> metadataHeaders = getHeaders(getOriginalUrl());
-            final Response metadataResponse = downloader.get(metadataUrl, metadataHeaders);
-            BilibiliRiskControl.check(metadataResponse);
-            watch = parseVideoMetadata(metadataResponse.responseBody());
-
-            if (watch == null) {
-                throw new ContentNotAvailableException(
-                        "Could not get Bilibili video metadata");
-            }
-            page = BilibiliStreamPageParser.pageForUrl(watch, getLinkHandler().getUrl());
-            cid = page.getLong("cid");
-            watchDataCache.setCid(getId(), cid);
-            watchDataCache.setBvid(getId(), bvid);
+            final BilibiliStreamMetadataHelper.VideoMetadata metadata =
+                    BilibiliStreamMetadataHelper.fetchVideoMetadata(
+                            downloader, getId(), getLinkHandler().getUrl(), getOriginalUrl());
+            watch = metadata.watch;
+            page = metadata.page;
+            bvid = metadata.bvid;
+            cid = metadata.cid;
+            BilibiliStreamMetadataHelper.cacheIds(watchDataCache, getId(), bvid, cid);
             duration = page.getInt("duration");
             isPaid = watch.getObject("rights").getInt("pay");
         }
