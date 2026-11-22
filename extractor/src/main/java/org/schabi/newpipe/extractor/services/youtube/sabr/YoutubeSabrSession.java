@@ -621,11 +621,23 @@ public final class YoutubeSabrSession {
         final ContentCountry contentCountry = localization.getCountryCode().isEmpty()
                 ? ContentCountry.DEFAULT
                 : new ContentCountry(localization.getCountryCode());
-        final YoutubeSabrInfo fresh = playerInfoReloader.reload(
-                info.getVideoId(), info.getProfile(), localization, contentCountry,
-                null, reloadPlaybackToken);
+        final String attempt = "SABR player reload " + reloads + "/" + MAX_RELOADS_PER_SESSION;
+        final YoutubeSabrInfo fresh;
+        try {
+            fresh = playerInfoReloader.reload(
+                    info.getVideoId(), info.getProfile(), localization, contentCountry,
+                    null, reloadPlaybackToken);
+        } catch (final SabrReloadException e) {
+            throw e;
+        } catch (final SabrProtocolException e) {
+            // YouTube answers a refused reload with an UNPLAYABLE player response for a video it
+            // just played; saying so, instead of "budget spent", lets the caller treat it as a refusal.
+            throw new SabrReloadException(attempt + " refused: " + e.getMessage(),
+                    reloadPlaybackToken);
+        }
         if (fresh.getServerAbrStreamingUrl() == null || fresh.getServerAbrStreamingUrl().isEmpty()) {
-            return false;
+            throw new SabrReloadException(attempt + " refused: no streaming URL",
+                    reloadPlaybackToken);
         }
         final boolean visitorIdentityChanged =
                 !Objects.equals(info.getVisitorData(), fresh.getVisitorData());

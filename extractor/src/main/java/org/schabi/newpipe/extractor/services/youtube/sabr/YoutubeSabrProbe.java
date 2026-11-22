@@ -214,6 +214,17 @@ public final class YoutubeSabrProbe {
     }
 
     @Nonnull
+    static String describePlayability(@Nonnull final JsonObject playerResponse) {
+        final JsonObject playability = playerResponse.getObject("playabilityStatus");
+        final String status = playability.getString("status", "");
+        if (status.isEmpty()) {
+            return "";
+        }
+        final String reason = playability.getString("reason", "");
+        return " (" + status + (reason.isEmpty() ? "" : ": " + reason) + ")";
+    }
+
+    @Nonnull
     private static YoutubeSabrInfo fromPlayerResponse(
             @Nonnull final String videoId,
             @Nonnull final YoutubeSabrClientProfile profile,
@@ -223,8 +234,9 @@ public final class YoutubeSabrProbe {
             @Nonnull final String clientVersion,
             final boolean playerPoTokenAttached) throws ExtractionException {
         final JsonObject streamingData = playerResponse.getObject(STREAMING_DATA);
-        if (streamingData == null) {
-            throw new SabrProtocolException("Player response has no streamingData for " + profile);
+        if (streamingData == null || streamingData.isEmpty()) {
+            throw new SabrProtocolException("Player response has no streamingData for " + profile
+                    + describePlayability(playerResponse));
         }
 
         final String unresolvedServerAbrStreamingUrl =
